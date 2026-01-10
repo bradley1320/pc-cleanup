@@ -2,7 +2,7 @@
 
 A fancy terminal-based Windows optimization toolkit with a colorful UI.
 
-![PC Clean Banner](https://github.com/John-AI-Labs/pc-cleanup/raw/main/screenshot.png)
+![PC Clean Screenshot](screenshot.png)
 
 ## Features
 
@@ -14,6 +14,8 @@ A fancy terminal-based Windows optimization toolkit with a colorful UI.
 | **Network Reset** | Flushes DNS, resets Winsock and TCP/IP stack |
 | **Disk Analysis** | Visual drive usage bars + top 10 largest folders |
 | **Full Tune-Up** | Runs everything including DISM component cleanup (10-15 min) |
+| **Create Backup** | Saves current settings before optimization |
+| **Restore Backup** | Reverts to your saved settings if needed |
 
 ## Quick Start
 
@@ -28,50 +30,14 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
 ```
 
 ### Run as Administrator
-For full functionality (Prefetch cleanup, DISM, network reset), right-click PowerShell → **Run as Administrator**
+For full functionality (Prefetch cleanup, DISM, network reset, system restore points), right-click PowerShell → **Run as Administrator**
 
-## What It Does
+## What's New in v1.2
 
-### Quick Clean
-- Windows temp folders (`%TEMP%`, `C:\Windows\Temp`)
-- Browser caches (Chrome, Edge, Firefox) - skips if browser is running
-- Recycle Bin
-- Windows Update download cache (admin only)
-
-### Startup Manager
-- Scans Registry Run keys + Startup folder
-- Auto-disable common bloat: Discord, Steam, Spotify, Epic Games, OneDrive, etc.
-- Or manually disable individual items
-
-### Performance Mode
-- Sets **High Performance** power plan (falls back to Ultimate Performance if unavailable)
-- Disables transparency and animations
-- Reduces menu delay
-- Enables Game Mode, disables Game Bar overlay
-
-### Network Reset
-- Flushes DNS cache
-- Resets Winsock catalog (admin)
-- Resets TCP/IP stack (admin)
-- Clears ARP cache (admin)
-
-### Full Tune-Up (Admin)
-All of the above, plus:
-- Prefetch cleanup
-- DISM Component Cleanup (WinSxS) - can recover 2-10GB
-
-## Smart Features
-
-- **Pending Reboot Detection** - Warns if Windows updates are waiting
-- **Browser Detection** - Skips cache cleaning for running browsers
-- **Power Plan Fallback** - Tries Ultimate Performance if High Performance is unavailable
-- **Admin Awareness** - Shows what features are limited without admin rights
-
-## Requirements
-
-- Windows 10/11
-- PowerShell 5.1+
-- Administrator rights recommended
+- **Backup/Restore Manager** - Save your settings before optimizing, restore anytime
+- **System Restore Point** - Option to create Windows restore point before Full Tune-Up
+- **Auto-backup** - Full Tune-Up automatically saves your settings first
+- **Better UX** - Press Enter to continue (instead of any key)
 
 ## Safety
 
@@ -79,6 +45,7 @@ This script:
 - Only deletes temporary/cache files that Windows regenerates
 - Does not modify system files
 - Does not install anything
+- Creates backups before making changes
 - Is fully open source - review the code yourself
 
 **Use at your own risk.** While designed to be safe, always ensure you have backups of important data.
@@ -87,13 +54,8 @@ This script:
 
 MIT License - see [LICENSE](LICENSE)
 
-## Contributing
-
-Issues and PRs welcome. This started as a personal tool and grew from there.
-
 ## Roadmap
 
-- [ ] Backup/restore functionality
+- [ ] Thermal check before optimization
 - [ ] `-WhatIf` dry-run mode
 - [ ] Log file output
-- [ ] Scheduled task integration
