@@ -150,7 +150,7 @@ function Test-BrowsersRunning {
 # more power but makes your PC faster. This function switches you to the
 # faster option.
 #
-# ⚡ THIS CHANGES A SYSTEM SETTING:
+# âš¡ THIS CHANGES A SYSTEM SETTING:
 # Your power plan will be changed to "High Performance" or "Ultimate Performance"
 # This makes your PC prioritize speed over energy saving. Your electricity
 # bill might go up slightly, and laptops will drain battery faster.
@@ -385,7 +385,7 @@ function Restore-SettingsBackup {
     # -------------------------------------------------------------------------
     # Read the saved power plan ID and tell Windows to switch back to it.
     #
-    # ⚡ THIS CHANGES A SYSTEM SETTING:
+    # âš¡ THIS CHANGES A SYSTEM SETTING:
     # Your power plan will be changed back to whatever it was before.
     #
     $powerFile = "$backupFile`_powerplan.txt"
@@ -408,7 +408,7 @@ function Restore-SettingsBackup {
     # Import the .reg file back into Windows Registry.
     # This puts back any startup programs that were removed.
     #
-    # ⚡ THIS CHANGES SYSTEM SETTINGS:
+    # âš¡ THIS CHANGES SYSTEM SETTINGS:
     # Programs that were disabled from startup will start again at boot.
     #
     $startupFile = "$backupFile`_startup_hkcu.reg"
@@ -427,7 +427,7 @@ function Restore-SettingsBackup {
     # -------------------------------------------------------------------------
     # Put back the animation and visual effects settings.
     #
-    # ⚡ THIS CHANGES SYSTEM SETTINGS:
+    # âš¡ THIS CHANGES SYSTEM SETTINGS:
     # Your visual effects will return to their previous state (possibly
     # more animations and eye candy than the performance-optimized setting).
     #
@@ -480,7 +480,7 @@ function Restore-SettingsBackup {
 # If something goes wrong (not just from this script, but anything),
 # you can use Windows' built-in restore feature to go back in time.
 #
-# ⚠️ REQUIRES ADMINISTRATOR:
+# âš ï¸ REQUIRES ADMINISTRATOR:
 # Only works if you ran PowerShell as Administrator.
 #
 # NOTE: Windows only allows one restore point per day to save disk space.
@@ -614,7 +614,7 @@ function Show-Menu {
 # recreate them as needed. Browsers rebuild their cache automatically
 # (websites might load slightly slower the first time after cleaning).
 #
-# ⚠️ YOUR PERSONAL FILES ARE NEVER TOUCHED:
+# âš ï¸ YOUR PERSONAL FILES ARE NEVER TOUCHED:
 # Documents, photos, downloads - everything you care about is safe.
 # We only delete files in designated "temporary" locations.
 #
@@ -787,7 +787,7 @@ function Invoke-QuickClean {
     # Contains: Downloaded Windows updates that have already been installed
     # Safe to delete: YES - these are just leftover installation files
     #
-    # ⚠️ REQUIRES ADMINISTRATOR:
+    # âš ï¸ REQUIRES ADMINISTRATOR:
     # This folder is protected, so we need Admin rights to clean it.
     # We also need to temporarily stop the Windows Update service.
     #
@@ -847,7 +847,7 @@ function Invoke-QuickClean {
 # startup so they're ready when you log in. Nice if you use them
 # immediately, but wasteful if you don't need them right away.
 #
-# ⚡ THIS CAN CHANGE SYSTEM SETTINGS:
+# âš¡ THIS CAN CHANGE SYSTEM SETTINGS:
 # If you choose to disable programs, they won't start automatically
 # anymore. You can re-enable them in Windows Task Manager (Startup tab)
 # or restore from backup.
@@ -934,7 +934,7 @@ function Invoke-StartupManager {
         Write-Host "    [A] Disable common bloat automatically" -ForegroundColor Yellow
         Write-Host "    [0] Back to main menu" -ForegroundColor DarkGray
         Write-Host ""
-        Write-Host "  Enter number to disable, A for auto-clean, or 0 to exit: " -NoNewline -ForegroundColor Yellow
+        Write-Host "  Enter numbers to disable (e.g., 1,3,5), A for auto-clean, or 0 to exit: " -NoNewline -ForegroundColor Yellow
         
         $choice = Read-Host
         
@@ -983,22 +983,40 @@ function Invoke-StartupManager {
             }
         }
         # ---------------------------------------------------------------------
-        # OPTION: DISABLE SPECIFIC PROGRAM BY NUMBER
+        # OPTION: DISABLE SPECIFIC PROGRAM(S) BY NUMBER
         # ---------------------------------------------------------------------
-        elseif ($choice -match '^\d+$') {
-            $index = [int]$choice - 1
-            if ($index -ge 0 -and $index -lt $startupItems.Count) {
-                $item = $startupItems[$index]
-                try {
-                    if ($item.Type -eq "Registry") {
-                        Remove-ItemProperty -Path $item.Path -Name $item.Name -ErrorAction Stop
+        # Supports multiple selections like "1,3,5" or single "1"
+        #
+        elseif ($choice -match '^[\d,\s]+$') {
+            # Split by comma, trim whitespace, remove empty entries
+            $selections = $choice -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
+            $disabled = 0
+            
+            foreach ($selection in $selections) {
+                if ($selection -match '^\d+$') {
+                    $index = [int]$selection - 1
+                    if ($index -ge 0 -and $index -lt $startupItems.Count) {
+                        $item = $startupItems[$index]
+                        try {
+                            if ($item.Type -eq "Registry") {
+                                Remove-ItemProperty -Path $item.Path -Name $item.Name -ErrorAction Stop
+                            } else {
+                                Remove-Item -Path $item.Path -Force -ErrorAction Stop
+                            }
+                            Write-Success "Disabled: $($item.Name)"
+                            $disabled++
+                        } catch {
+                            Write-Err "Could not disable: $($item.Name)"
+                        }
                     } else {
-                        Remove-Item -Path $item.Path -Force -ErrorAction Stop
+                        Write-Warn "Invalid selection: $selection"
                     }
-                    Write-Success "Disabled: $($item.Name)"
-                } catch {
-                    Write-Err "Could not disable: $($item.Name)"
                 }
+            }
+            
+            if ($disabled -gt 0) {
+                Write-Host ""
+                Write-Host "  Disabled $disabled startup item(s)" -ForegroundColor Green
             }
         }
     }
@@ -1014,13 +1032,13 @@ function Invoke-StartupManager {
 # Adjusts Windows settings to prioritize speed over visual prettiness.
 # This can make older PCs feel snappier and helps gaming performance.
 #
-# ⚡ THIS CHANGES MULTIPLE SYSTEM SETTINGS:
-# 1. Power Plan → High Performance (more power, faster CPU)
-# 2. Visual Effects → Performance mode (less animations)
-# 3. Transparency → Disabled (no see-through windows)
-# 4. Menu Delay → Instant (menus appear immediately)
-# 5. Game Mode → Enabled (Windows prioritizes games)
-# 6. Game Bar → Disabled (removes overlay that can cause stuttering)
+# âš¡ THIS CHANGES MULTIPLE SYSTEM SETTINGS:
+# 1. Power Plan â†’ High Performance (more power, faster CPU)
+# 2. Visual Effects â†’ Performance mode (less animations)
+# 3. Transparency â†’ Disabled (no see-through windows)
+# 4. Menu Delay â†’ Instant (menus appear immediately)
+# 5. Game Mode â†’ Enabled (Windows prioritizes games)
+# 6. Game Bar â†’ Disabled (removes overlay that can cause stuttering)
 #
 # CAN I UNDO THIS?
 # Yes! Use the Restore Backup option to put everything back.
@@ -1165,7 +1183,7 @@ function Invoke-PerformanceMode {
 # and configured connections are NOT affected. We're just clearing
 # temporary caches that can sometimes get corrupted.
 #
-# ⚠️ SOME CHANGES REQUIRE A RESTART:
+# âš ï¸ SOME CHANGES REQUIRE A RESTART:
 # The Winsock and TCP/IP resets take effect after you restart Windows.
 #
 
@@ -1201,7 +1219,7 @@ function Invoke-NetworkReset {
         # Winsock is the Windows component that handles network connections.
         # "Resetting" it restores it to default state, fixing corruption.
         #
-        # ⚡ THIS CHANGES SYSTEM SETTINGS (requires restart):
+        # âš¡ THIS CHANGES SYSTEM SETTINGS (requires restart):
         # Some third-party software (VPNs, firewalls) may need to be
         # reconfigured after this, but it's rare.
         #
@@ -1219,7 +1237,7 @@ function Invoke-NetworkReset {
         # TCP/IP is the core protocol that makes the internet work.
         # This reset clears any custom settings and restores defaults.
         #
-        # ⚡ THIS CHANGES SYSTEM SETTINGS (requires restart):
+        # âš¡ THIS CHANGES SYSTEM SETTINGS (requires restart):
         # If you had custom TCP/IP settings (rare), they'll be reset.
         #
         Write-Info "Resetting TCP/IP stack..."
@@ -1385,12 +1403,12 @@ function Invoke-DiskAnalysis {
 # Windows determines are safe to delete (old versions of updated
 # components that can't be uninstalled anymore).
 #
-# ⚠️ THIS TAKES A LONG TIME:
+# âš ï¸ THIS TAKES A LONG TIME:
 # 5-15 minutes is normal, and it may appear "stuck" at 10% for a while.
 # This is completely normal - don't close the window! The tool is
 # analyzing which files are safe to remove.
 #
-# ⚠️ REQUIRES ADMINISTRATOR
+# âš ï¸ REQUIRES ADMINISTRATOR
 #
 
 function Invoke-DISMCleanup {
@@ -1424,15 +1442,15 @@ function Invoke-DISMCleanup {
 # 4. Prefetch cleanup (Admin only)
 # 5. DISM Component Cleanup (Admin only)
 #
-# ⏱️ HOW LONG DOES IT TAKE?
+# â±ï¸ HOW LONG DOES IT TAKE?
 # About 10-15 minutes, depending on your system. The DISM cleanup
 # at the end takes the longest.
 #
-# ⚡ THIS CHANGES MULTIPLE SYSTEM SETTINGS:
+# âš¡ THIS CHANGES MULTIPLE SYSTEM SETTINGS:
 # Same changes as Performance Mode, plus file deletions from Quick Clean.
 # A backup is created AUTOMATICALLY before any changes are made.
 #
-# ⚠️ RESTART RECOMMENDED:
+# âš ï¸ RESTART RECOMMENDED:
 # For best results, restart your computer after this completes.
 #
 
