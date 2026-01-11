@@ -1,8 +1,28 @@
 # PC Clean
-
 A fancy terminal-based Windows optimization toolkit with a colorful UI.
 
 ![PC Clean Screenshot](screenshot.png)
+
+---
+
+## Project Status
+
+✅ **Complete** - This tool is finished and does exactly what it's designed to do.
+
+No roadmap. No feature bloat. Just a clean utility you can run and trust.
+
+Bug reports welcome via [Issues](../../issues). Not actively adding new features.
+
+---
+
+## How to Download
+
+1. Click the green **<> Code** button (top right of this page)
+2. Click **Download ZIP**
+3. Extract the ZIP file
+4. Right-click `Run.bat` → **Run as Administrator**
+
+That's it!
 
 ---
 
@@ -16,11 +36,8 @@ This script:
 - ✅ Does NOT install anything
 - ✅ Creates backups before making any changes
 - ✅ Is fully open source - every line is readable
-- ✅ Is heavily commented in plain English so anyone can understand it
 
 ### How to Verify Safety
-
-Don't trust me - verify it yourself:
 
 1. Open the `PCCleanup.ps1` file
 2. Copy the entire code
@@ -80,11 +97,3 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
 MIT License - see [LICENSE](LICENSE)
 
 **Use at your own risk.** While designed to be safe, always ensure you have backups of important data.
-
----
-
-## Roadmap
-
-- [ ] Thermal check before optimization
-- [ ] `-WhatIf` dry-run mode
-- [ ] Log file output
