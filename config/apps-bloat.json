@@ -1,0 +1,42 @@
+{
+  "_version": "2.0.0",
+  "_description": "Known bloatware startup programs. StartupManager flags these for easy identification.",
+
+  "entries": [
+    {
+      "name": "OneDrive",
+      "publisher": "Microsoft Corporation",
+      "pattern": "OneDrive.exe",
+      "description": "Cloud storage sync client. Safe to disable if you don't use OneDrive.",
+      "risk": "safe"
+    },
+    {
+      "name": "Microsoft Teams",
+      "publisher": "Microsoft Corporation",
+      "pattern": "ms-teams.exe",
+      "description": "Communication app. Adds 3-5 seconds to boot time. Safe to disable and launch manually.",
+      "risk": "safe"
+    },
+    {
+      "name": "Cortana",
+      "publisher": "Microsoft Corporation",
+      "pattern": "SearchUI.exe",
+      "description": "Voice assistant. Runs in background consuming memory. Safe to disable.",
+      "risk": "safe"
+    },
+    {
+      "name": "Microsoft Edge Startup Boost",
+      "publisher": "Microsoft Corporation",
+      "pattern": "msedge.exe",
+      "description": "Pre-launches Edge processes at startup for faster opening. Uses 100-200MB RAM.",
+      "risk": "safe"
+    },
+    {
+      "name": "Xbox Game Bar",
+      "publisher": "Microsoft Corporation",
+      "pattern": "GameBar.exe",
+      "description": "Gaming overlay. Uses background resources even when not gaming. Safe to disable.",
+      "risk": "safe"
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "_version": "2.0.0",
+  "_description": "PC Cleanup v2 tweak catalog. Each entry defines a data-driven tweak processed by the TweakEngine.",
+
+  "DisableAdvertisingID": {
+    "name": "Disable Advertising ID",
+    "description": "Prevents apps from using your advertising ID for targeted ads.",
+    "detail": "Windows assigns a unique advertising ID to each user for cross-app ad targeting. Disabling it stops personalized ads in Microsoft apps and UWP apps. This has no effect on browser ads. Microsoft documents this as a user-facing privacy setting in Settings > Privacy > General.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/privacy/manage-connections-from-windows-operating-system-components-to-microsoft-services#31-general",
+    "category": "Privacy",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": false,
+    "registry": [
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo",
+        "name": "Enabled",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableDiagTrack": {
+    "name": "Disable Telemetry Service",
+    "description": "Stops the Connected User Experiences and Telemetry service (DiagTrack).",
+    "detail": "The DiagTrack service collects and transmits diagnostic and usage data to Microsoft. Disabling it significantly reduces telemetry but may affect Xbox Live achievements, Game Pass connectivity, and Teredo tunneling. Safe to disable if you don't use Microsoft gaming services.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/privacy/configure-windows-diagnostic-data-in-your-organization",
+    "category": "Privacy",
+    "risk": "moderate",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [
+      {
+        "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection",
+        "name": "AllowTelemetry",
+        "value": 1,
+        "type": "DWord",
+        "defaultValue": 3
+      }
+    ],
+    "services": [
+      {
+        "name": "DiagTrack",
+        "startupType": "Disabled",
+        "defaultType": "Automatic"
+      }
+    ],
+    "scheduledTasks": [
+      {
+        "path": "\\Microsoft\\Windows\\Customer Experience Improvement Program\\Consolidator",
+        "enabled": false
+      }
+    ],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableCEIPTasks": {
+    "name": "Disable CEIP Scheduled Tasks",
+    "description": "Disables Customer Experience Improvement Program telemetry tasks.",
+    "detail": "Windows runs several scheduled tasks that collect usage data for the Customer Experience Improvement Program. These tasks run in the background and transmit data about hardware, software, and feature usage. Disabling them is safe and reduces background CPU and network usage.",
+    "docsUrl": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-R2-and-2012/jj553400(v=ws.11)",
+    "category": "Privacy",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [],
+    "services": [],
+    "scheduledTasks": [
+      {
+        "path": "\\Microsoft\\Windows\\Customer Experience Improvement Program\\Consolidator",
+        "enabled": false
+      },
+      {
+        "path": "\\Microsoft\\Windows\\Customer Experience Improvement Program\\UsbCeip",
+        "enabled": false
+      },
+      {
+        "path": "\\Microsoft\\Windows\\DiskDiagnostic\\Microsoft-Windows-DiskDiagnosticDataCollector",
+        "enabled": false
+      }
+    ],
+    "invokeScript": [],
+    "undoScript": []
+  }
+}

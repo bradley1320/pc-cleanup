@@ -1,0 +1,42 @@
+{
+  "_version": "2.0.0",
+  "_description": "Critical startup programs that should NOT be disabled. StartupManager warns if the user selects these.",
+
+  "entries": [
+    {
+      "name": "Realtek Audio",
+      "publisher": "Realtek Semiconductor",
+      "pattern": "RAVCpl64.exe|RtkNGUI64.exe|RtkAudUService64.exe",
+      "description": "Audio driver control panel. Disabling may cause audio to stop working.",
+      "severity": "critical"
+    },
+    {
+      "name": "NVIDIA Display Driver",
+      "publisher": "NVIDIA Corporation",
+      "pattern": "NvDisplay.Container.exe|nvcontainer.exe",
+      "description": "GPU driver service. Disabling breaks display output and GPU acceleration.",
+      "severity": "critical"
+    },
+    {
+      "name": "Windows Security",
+      "publisher": "Microsoft Corporation",
+      "pattern": "SecurityHealthSystray.exe|SecurityHealth",
+      "description": "Windows Defender system tray icon. Disabling hides security notifications.",
+      "severity": "critical"
+    },
+    {
+      "name": "Bluetooth Support",
+      "publisher": "Various",
+      "pattern": "BTServer.exe|btmshellex.dll|BtvStack.exe",
+      "description": "Bluetooth stack. Disabling prevents Bluetooth devices from connecting.",
+      "severity": "critical"
+    },
+    {
+      "name": "Intel Graphics Command Center",
+      "publisher": "Intel Corporation",
+      "pattern": "igfxCUIService.exe|igfxEM.exe",
+      "description": "Intel GPU driver service. Disabling may cause display scaling issues.",
+      "severity": "critical"
+    }
+  ]
+}
