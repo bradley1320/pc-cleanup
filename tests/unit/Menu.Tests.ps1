@@ -206,6 +206,48 @@ Describe 'Show-SelectionMenu' {
         $result = Show-SelectionMenu -Title 'Test' -Items $items
         $result.Count | Should -Be 0
     }
+
+    It 'should select exactly items 1,5,2 when toggled from unselected state' {
+        Mock Read-Host { return '1,5,2' }
+        $items = @(
+            [PSCustomObject]@{ Name = 'TempFiles';   Description = 'D1'; Selected = $false }
+            [PSCustomObject]@{ Name = 'WinTemp';     Description = 'D2'; Selected = $false }
+            [PSCustomObject]@{ Name = 'WUCache';     Description = 'D3'; Selected = $false }
+            [PSCustomObject]@{ Name = 'Prefetch';    Description = 'D4'; Selected = $false }
+            [PSCustomObject]@{ Name = 'ChromeCache'; Description = 'D5'; Selected = $false }
+            [PSCustomObject]@{ Name = 'EdgeCache';   Description = 'D6'; Selected = $false }
+        )
+        $result = @(Show-SelectionMenu -Title 'Select targets:' -Items $items)
+        $result.Count | Should -Be 3
+        $names = @($result | ForEach-Object { $_.Name })
+        $names | Should -Contain 'TempFiles'
+        $names | Should -Contain 'ChromeCache'
+        $names | Should -Contain 'WinTemp'
+        $names | Should -Not -Contain 'WUCache'
+        $names | Should -Not -Contain 'Prefetch'
+        $names | Should -Not -Contain 'EdgeCache'
+    }
+
+    It 'should select exactly items 1,3,5 and clean only those' {
+        Mock Read-Host { return '1,3,5' }
+        $items = @(
+            [PSCustomObject]@{ Name = 'UserTemp';    Description = 'D1'; Selected = $false }
+            [PSCustomObject]@{ Name = 'WinTemp';     Description = 'D2'; Selected = $false }
+            [PSCustomObject]@{ Name = 'WUCache';     Description = 'D3'; Selected = $false }
+            [PSCustomObject]@{ Name = 'Prefetch';    Description = 'D4'; Selected = $false }
+            [PSCustomObject]@{ Name = 'ChromeCache'; Description = 'D5'; Selected = $false }
+            [PSCustomObject]@{ Name = 'EdgeCache';   Description = 'D6'; Selected = $false }
+        )
+        $result = @(Show-SelectionMenu -Title 'Select targets:' -Items $items)
+        $result.Count | Should -Be 3
+        $selectedNames = @($result | ForEach-Object { $_.Name })
+        $selectedNames | Should -Contain 'UserTemp'
+        $selectedNames | Should -Contain 'WUCache'
+        $selectedNames | Should -Contain 'ChromeCache'
+        $selectedNames | Should -Not -Contain 'WinTemp'
+        $selectedNames | Should -Not -Contain 'Prefetch'
+        $selectedNames | Should -Not -Contain 'EdgeCache'
+    }
 }
 
 Describe 'Show-ReportMenu' {

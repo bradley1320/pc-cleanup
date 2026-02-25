@@ -105,10 +105,21 @@ if ($paramStartLine -ge 0 -and $paramEndLine -ge 0) {
         $paramLines += $mainLines[$i]
     }
     $mainParamBlock = ($paramLines -join "`r`n")
-    # Body is everything after the param block
+    # Body is everything after the param block, excluding DIST_EXCLUDE blocks
     $bodyLines = @()
+    $excluding = $false
     for ($i = $paramEndLine + 1; $i -lt $mainLines.Count; $i++) {
-        $bodyLines += $mainLines[$i]
+        if ($mainLines[$i] -match '^\s*#\s*DIST_EXCLUDE_START') {
+            $excluding = $true
+            continue
+        }
+        if ($mainLines[$i] -match '^\s*#\s*DIST_EXCLUDE_END') {
+            $excluding = $false
+            continue
+        }
+        if (-not $excluding) {
+            $bodyLines += $mainLines[$i]
+        }
     }
     $mainBody = ($bodyLines -join "`r`n")
 } else {
@@ -176,6 +187,23 @@ if (Test-Path $runBatSource) {
     Copy-Item -Path $runBatSource -Destination $distPath -Force
     Write-Host "  [+] Run.bat" -ForegroundColor DarkGray
 }
+
+# --- Config Integrity: Compute SHA-256 hashes and embed in compiled script ---
+$configFileNames = @('tweaks.json', 'apps-bloat.json', 'apps-critical.json', 'profiles.json')
+$hashLines = @()
+foreach ($cfgFile in $configFileNames) {
+    $cfgPath = Join-Path $configPath $cfgFile
+    if (Test-Path $cfgPath) {
+        $hash = (Get-FileHash -Path $cfgPath -Algorithm SHA256).Hash
+        $hashLines += "    '$cfgFile' = '$hash'"
+    }
+}
+$hashTableStr = '$script:ExpectedConfigHashes = @{' + "`r`n" + ($hashLines -join "`r`n") + "`r`n}"
+
+$compiledContent = Get-Content -Path $outputPath -Raw
+$compiledContent = $compiledContent.Replace('$script:ExpectedConfigHashes = @{}', $hashTableStr)
+Set-Content -Path $outputPath -Value $compiledContent -Encoding UTF8
+Write-Host "  [+] Config integrity hashes embedded ($($hashLines.Count) files)" -ForegroundColor DarkGray
 
 # Summary
 $lineCount = (Get-Content -Path $outputPath).Count

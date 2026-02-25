@@ -34,6 +34,7 @@ param(
     [string]$Snapshot
 )
 
+# DIST_EXCLUDE_START -- Build.ps1 strips this block (functions are already inline in dist)
 # --- Module Loading ---
 # Load order is critical: core (01-06) -> handlers -> modules -> ui
 # All paths resolved via $PSScriptRoot -- never relative to working directory
@@ -62,6 +63,72 @@ Get-ChildItem -Path $modulePath -Filter '*.ps1' | ForEach-Object {
 Get-ChildItem -Path $uiPath -Filter '*.ps1' | ForEach-Object {
     . $_.FullName
 }
+# DIST_EXCLUDE_END
+
+# --- Config Integrity Check ---
+# SHA-256 hashes populated by Build.ps1 at compile time. Empty in dev mode (skipped).
+$script:ExpectedConfigHashes = @{}
+
+function Test-ConfigIntegrity {
+    <#
+    .SYNOPSIS
+        Verifies config files have not been tampered with.
+    .DESCRIPTION
+        Compares SHA-256 hashes of config files against expected values embedded
+        at build time. In dev mode (no embedded hashes), the check is skipped.
+        If any config file has been modified, displays a warning and requires
+        user acknowledgment before proceeding.
+    .OUTPUTS
+        [bool] $true if safe to proceed, $false if user chose to exit.
+    #>
+    [CmdletBinding()]
+    param()
+
+    if ($script:ExpectedConfigHashes.Count -eq 0) { return $true }
+
+    # In compiled dist, config/ is next to pccleanup.ps1. Use $script:ConfigPath
+    # (set by TweakEngine) as fallback for non-standard contexts.
+    $configDir = if ($PSScriptRoot) { Join-Path $PSScriptRoot 'config' } else { $script:ConfigPath }
+    if (-not $configDir -or -not (Test-Path $configDir)) { return $true }
+    $modified = @()
+
+    foreach ($fileName in $script:ExpectedConfigHashes.Keys) {
+        $filePath = Join-Path $configDir $fileName
+        if (-not (Test-Path $filePath)) {
+            $modified += "$fileName (missing)"
+            continue
+        }
+        $actual = (Get-FileHash -Path $filePath -Algorithm SHA256).Hash
+        if ($actual -ne $script:ExpectedConfigHashes[$fileName]) {
+            $modified += $fileName
+        }
+    }
+
+    if ($modified.Count -eq 0) { return $true }
+
+    Write-Host ""
+    Write-Host "  *** WARNING: Configuration files have been modified ***" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "  Modified files:" -ForegroundColor Yellow
+    foreach ($f in $modified) {
+        Write-Host "    - $f" -ForegroundColor Yellow
+    }
+    Write-Host ""
+    Write-Host "  This could be a security risk. Config files can contain scripts" -ForegroundColor Yellow
+    Write-Host "  that execute with elevated privileges." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  To restore originals, re-extract from the distribution ZIP." -ForegroundColor Yellow
+    Write-Host ""
+
+    $response = Read-Host "  Continue anyway? (Y/N)"
+    if ($response -notmatch '^[Yy]') {
+        Write-Host "  Exiting." -ForegroundColor Red
+        return $false
+    }
+    return $true
+}
+
+if (-not (Test-ConfigIntegrity)) { return }
 
 # --- CLI Dispatch ---
 
