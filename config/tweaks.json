@@ -594,5 +594,308 @@
     "scheduledTasks": [],
     "invokeScript": [],
     "undoScript": []
+  },
+
+  "SetHighPerformancePowerPlan": {
+    "name": "Set High Performance Power Plan",
+    "description": "Switches the active power plan to High Performance for maximum CPU and device responsiveness.",
+    "detail": "Windows ships with Balanced (default), Power Saver, and High Performance power plans. High Performance prevents the CPU from downclocking, keeps PCI Express at full link state, and disables USB selective suspend. This improves responsiveness and reduces micro-stutters at the cost of higher power consumption. On laptops, battery life will be significantly reduced. The tweak first tries to activate the built-in High Performance plan (GUID 8c5e7fda...). If Ultimate Performance is available (workstation SKUs, Win10 1803+), it will use that instead via invokeScript fallback.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/win32/power/power-policy-settings",
+    "category": "Performance",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [
+      "$ultimateGuid = 'e9a42b02-d5df-448d-aa00-03f14749eb61'; $highPerfGuid = '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c'; $existing = powercfg /list 2>&1; if ($existing -match $ultimateGuid) { powercfg /setactive $ultimateGuid; Write-Info 'Activated Ultimate Performance power plan.' } elseif ($existing -match $highPerfGuid) { powercfg /setactive $highPerfGuid; Write-Info 'Activated High Performance power plan.' } else { Write-Warn 'Neither High Performance nor Ultimate Performance plan found.' }"
+    ],
+    "undoScript": [
+      "$balancedGuid = '381b4222-f694-41f0-9685-ff5bb260df2e'; powercfg /setactive $balancedGuid; Write-Info 'Restored Balanced power plan.'"
+    ]
+  },
+
+  "OptimizeVisualEffects": {
+    "name": "Optimize Visual Effects for Performance",
+    "description": "Disables Windows animations, transparency, and visual flourishes for snappier UI response.",
+    "detail": "Windows enables many visual effects by default: window animations, fade effects, smooth scrolling, transparency, shadow effects, and animated controls. These consume GPU and CPU cycles on every frame. Setting VisualFXSetting to 2 (custom) and disabling individual effects produces a noticeably snappier desktop. Transparency is disabled separately via the Personalize registry key. Menu show delay is reduced from the 400ms default to 0ms for instant menu response. The Windows shell caches visual settings in memory -- an Explorer refresh (WM_SETTINGCHANGE broadcast or Explorer restart) is needed after applying for changes to become visible.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/win32/controls/cookbook-overview",
+    "category": "Performance",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": false,
+    "registry": [
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects",
+        "name": "VisualFXSetting",
+        "value": 2,
+        "type": "DWord",
+        "defaultValue": 0
+      },
+      {
+        "path": "HKCU:\\Control Panel\\Desktop",
+        "name": "UserPreferencesMask",
+        "value": "9012038010000000",
+        "type": "String",
+        "defaultValue": "9E3E078012000000"
+      },
+      {
+        "path": "HKCU:\\Control Panel\\Desktop",
+        "name": "MenuShowDelay",
+        "value": "0",
+        "type": "String",
+        "defaultValue": "400"
+      },
+      {
+        "path": "HKCU:\\Control Panel\\Desktop\\WindowMetrics",
+        "name": "MinAnimate",
+        "value": "0",
+        "type": "String",
+        "defaultValue": "1"
+      },
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+        "name": "TaskbarAnimations",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableTransparency": {
+    "name": "Disable Transparency Effects",
+    "description": "Turns off the acrylic/blur transparency effects in taskbar, Start menu, and Action Center.",
+    "detail": "Windows 10/11 uses acrylic (blur) transparency on the taskbar, Start menu, notification center, and some app backgrounds. This requires GPU compositing on every frame and can cause micro-stutters on older hardware. Disabling it renders these surfaces as solid colors instead. The change takes effect after an Explorer shell refresh (WM_SETTINGCHANGE broadcast or Explorer restart).",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/uwp/design/style/acrylic",
+    "category": "Performance",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": false,
+    "registry": [
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+        "name": "EnableTransparency",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "EnableGameMode": {
+    "name": "Enable Game Mode",
+    "description": "Enables Windows Game Mode for prioritized GPU and CPU resources during gaming.",
+    "detail": "Game Mode tells Windows to prioritize the foreground game for CPU and GPU scheduling, and to suppress background tasks like Windows Update installs and driver updates during gameplay. It is enabled by default on Windows 10 1703+ but can be toggled off by users or policies. This tweak ensures it is enabled. Game Mode has minimal impact on non-gaming workloads.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/win32/direct3darticles/feature-game-mode",
+    "category": "Performance",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": false,
+    "registry": [
+      {
+        "path": "HKCU:\\Software\\Microsoft\\GameBar",
+        "name": "AllowAutoGameMode",
+        "value": 1,
+        "type": "DWord",
+        "defaultValue": 1
+      },
+      {
+        "path": "HKCU:\\Software\\Microsoft\\GameBar",
+        "name": "AutoGameModeEnabled",
+        "value": 1,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableGameBar": {
+    "name": "Disable Game Bar and Game DVR",
+    "description": "Disables the Xbox Game Bar overlay and background Game DVR recording.",
+    "detail": "The Xbox Game Bar runs an overlay process that intercepts Win+G and provides FPS counters, screenshots, and video recording. Game DVR continuously records gameplay in the background even when you are not actively recording. Both consume GPU, CPU, and disk resources. Disabling them frees these resources for actual gaming performance. Note: this does NOT uninstall Game Bar -- it disables the overlay and background recording via policy.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/configuration/kiosk-policies#--gameconfigpolicy",
+    "category": "Performance",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [
+      {
+        "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\GameDVR",
+        "name": "AllowGameDVR",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      },
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR",
+        "name": "AppCaptureEnabled",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      },
+      {
+        "path": "HKCU:\\System\\GameConfigStore",
+        "name": "GameDVR_Enabled",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableMouseAcceleration": {
+    "name": "Disable Mouse Acceleration (Enhance Pointer Precision)",
+    "description": "Disables Windows mouse acceleration for consistent 1:1 mouse tracking.",
+    "detail": "Windows 'Enhance Pointer Precision' applies acceleration curves to mouse movement -- fast movements cover more screen distance per inch than slow movements. This is disorienting for gaming and precision work. Disabling it provides raw, linear 1:1 mouse tracking. The MouseSpeed=0 and MouseThreshold values disable the acceleration curve. SmoothMouseXCurve and SmoothMouseYCurve can also be set to linear but the simple disable via MouseSpeed is sufficient for most users.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-mouseinput",
+    "category": "Performance",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": false,
+    "registry": [
+      {
+        "path": "HKCU:\\Control Panel\\Mouse",
+        "name": "MouseSpeed",
+        "value": "0",
+        "type": "String",
+        "defaultValue": "1"
+      },
+      {
+        "path": "HKCU:\\Control Panel\\Mouse",
+        "name": "MouseThreshold1",
+        "value": "0",
+        "type": "String",
+        "defaultValue": "6"
+      },
+      {
+        "path": "HKCU:\\Control Panel\\Mouse",
+        "name": "MouseThreshold2",
+        "value": "0",
+        "type": "String",
+        "defaultValue": "10"
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableStartupDelay": {
+    "name": "Disable Startup Delay",
+    "description": "Removes the artificial 10-second startup delay that Windows adds before launching startup programs.",
+    "detail": "Windows 10/11 introduces a deliberate delay before launching startup programs to reduce perceived boot time in metrics. Setting StartupDelayInMSec to 0 removes this delay so startup programs begin launching immediately after login. This makes the desktop usable faster at the cost of slightly higher resource contention during the first few seconds after login.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/win32/win7appqual/automatic-maintenance",
+    "category": "Performance",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": false,
+    "registry": [
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Serialize",
+        "name": "StartupDelayInMSec",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": "<NonExistent>"
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableSearchIndexing": {
+    "name": "Disable Windows Search Indexing Service",
+    "description": "Stops the Windows Search indexing service to reduce disk I/O and CPU usage.",
+    "detail": "The Windows Search service (WSearch) continuously indexes file contents, email, and metadata across your drives. On SSDs, the I/O penalty is minimal, but the CPU and memory overhead is still present. Disabling it stops all background indexing. File searches in Explorer will fall back to real-time scanning (slower for large directories but uses zero background resources). Outlook desktop search will also be slower. This is classified as moderate because it noticeably changes the search experience.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/win32/search/-search-3x-wds-overview",
+    "category": "Performance",
+    "risk": "moderate",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [],
+    "services": [
+      {
+        "name": "WSearch",
+        "startupType": "Disabled",
+        "defaultType": "Automatic"
+      }
+    ],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableWindowsTips": {
+    "name": "Disable Windows Tips and Suggestions",
+    "description": "Stops Windows from showing tips, tricks, and suggestions in the Start menu and Settings.",
+    "detail": "Windows periodically displays tips, suggestions, and feature promotions in the Start menu, lock screen, Settings app, and notification center. These are essentially ads for Microsoft services and features. Disabling them reduces visual clutter and prevents occasional background data fetches. This is purely cosmetic/informational -- no system behavior changes.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/configuration/manage-tips-and-suggestions",
+    "category": "Performance",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": false,
+    "registry": [
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+        "name": "SystemPaneSuggestionsEnabled",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      },
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+        "name": "SoftLandingEnabled",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      },
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+        "name": "SubscribedContent-338389Enabled",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      },
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+        "name": "SubscribedContent-310093Enabled",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
   }
 }

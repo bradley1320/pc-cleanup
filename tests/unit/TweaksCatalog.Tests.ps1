@@ -39,16 +39,16 @@ Describe 'Tweaks Catalog Validation' {
         $script:SchemaValidated = $false
     }
 
-    It 'should have exactly 20 total tweaks' {
-        $script:AllTweaks.Count | Should -Be 20
+    It 'should have exactly 29 total tweaks' {
+        $script:AllTweaks.Count | Should -Be 29
     }
 
-    It 'should have 10 safe-tier tweaks' {
-        @($script:AllTweaks | Where-Object { $_.risk -eq 'safe' }).Count | Should -Be 10
+    It 'should have 18 safe-tier tweaks' {
+        @($script:AllTweaks | Where-Object { $_.risk -eq 'safe' }).Count | Should -Be 18
     }
 
-    It 'should have 7 moderate-tier tweaks' {
-        @($script:AllTweaks | Where-Object { $_.risk -eq 'moderate' }).Count | Should -Be 7
+    It 'should have 8 moderate-tier tweaks' {
+        @($script:AllTweaks | Where-Object { $_.risk -eq 'moderate' }).Count | Should -Be 8
     }
 
     It 'should have 3 advanced-tier tweaks' {
@@ -144,10 +144,19 @@ Describe 'Tweaks Catalog Validation' {
         { Test-TweakSchema -Tweaks $script:AllTweaks } | Should -Not -Throw
     }
 
-    It 'all tweaks should be in the Privacy category' {
+    It 'all tweaks should be in a valid category' {
+        $validCategories = @('Privacy', 'Performance', 'Cleanup')
         foreach ($tweak in $script:AllTweaks) {
-            $tweak.category | Should -Be 'Privacy' -Because "$($tweak.Id) should be in Privacy category"
+            $tweak.category | Should -BeIn $validCategories -Because "$($tweak.Id) should be in a valid category"
         }
+    }
+
+    It 'should have 20 Privacy tweaks' {
+        @($script:AllTweaks | Where-Object { $_.category -eq 'Privacy' }).Count | Should -Be 20
+    }
+
+    It 'should have 9 Performance tweaks' {
+        @($script:AllTweaks | Where-Object { $_.category -eq 'Performance' }).Count | Should -Be 9
     }
 
     It 'BlockTelemetryFirewall should have invokeScript and undoScript' {
