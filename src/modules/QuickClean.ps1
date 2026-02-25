@@ -73,8 +73,8 @@ function Get-BrowserProfiles {
             $profiles += @($profileDirs | ForEach-Object { $_.Name })
         }
 
-        foreach ($profile in $profiles) {
-            $profilePath = Join-Path $browser.BasePath $profile
+        foreach ($browserProfile in $profiles) {
+            $profilePath = Join-Path $browser.BasePath $browserProfile
             if (-not (Test-Path -LiteralPath $profilePath)) { continue }
 
             # Chromium stores cache in Cache\Cache_Data (newer) or Cache (older)
@@ -92,7 +92,7 @@ function Get-BrowserProfiles {
                 Add-BrowserCleanupRoot -Path $cachePath
                 $results += [PSCustomObject]@{
                     Browser   = $browser.Name
-                    Profile   = $profile
+                    Profile   = $browserProfile
                     CachePath = $cachePath
                     DataPath  = $profilePath
                 }
@@ -355,7 +355,7 @@ function Invoke-Cleanup {
         [PSCustomObject] Summary with TotalFiles, TotalBytes, SkippedFiles, Errors.
     #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'WhatIf used in conditional branches')]
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSShouldProcess', '', Justification = 'Application-level WhatIf -- intentionally not using ShouldProcess')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSupportsShouldProcess', '', Justification = 'Application-level WhatIf -- intentionally not using ShouldProcess')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

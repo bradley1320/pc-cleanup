@@ -293,7 +293,8 @@ function Remove-SafeDirectory {
         Remove-SafeDirectory -Path "$env:TEMP\cache"
     #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'WhatIf used in conditional branches')]
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Application-level WhatIf -- intentionally not using ShouldProcess')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSupportsShouldProcess', '', Justification = 'Application-level WhatIf -- intentionally not using ShouldProcess')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Application-level WhatIf -- PS native WhatIf destroys junctions')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -446,7 +447,8 @@ function Remove-CleanupItem {
         Remove-CleanupItem -Path "$env:TEMP\cache" -WhatIf
     #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'WhatIf used in conditional branches')]
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Application-level WhatIf -- intentionally not using ShouldProcess')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSupportsShouldProcess', '', Justification = 'Application-level WhatIf -- intentionally not using ShouldProcess')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Application-level WhatIf -- PS native WhatIf destroys junctions')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
