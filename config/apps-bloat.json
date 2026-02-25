@@ -6,36 +6,106 @@
     {
       "name": "OneDrive",
       "publisher": "Microsoft Corporation",
-      "pattern": "OneDrive.exe",
+      "pattern": "OneDrive\\.exe",
       "description": "Cloud storage sync client. Safe to disable if you don't use OneDrive.",
       "risk": "safe"
     },
     {
       "name": "Microsoft Teams",
       "publisher": "Microsoft Corporation",
-      "pattern": "ms-teams.exe",
+      "pattern": "ms-teams\\.exe|Teams\\.exe",
       "description": "Communication app. Adds 3-5 seconds to boot time. Safe to disable and launch manually.",
       "risk": "safe"
     },
     {
       "name": "Cortana",
       "publisher": "Microsoft Corporation",
-      "pattern": "SearchUI.exe",
+      "pattern": "SearchUI\\.exe|Cortana\\.exe",
       "description": "Voice assistant. Runs in background consuming memory. Safe to disable.",
       "risk": "safe"
     },
     {
       "name": "Microsoft Edge Startup Boost",
       "publisher": "Microsoft Corporation",
-      "pattern": "msedge.exe",
+      "pattern": "msedge\\.exe",
       "description": "Pre-launches Edge processes at startup for faster opening. Uses 100-200MB RAM.",
       "risk": "safe"
     },
     {
       "name": "Xbox Game Bar",
       "publisher": "Microsoft Corporation",
-      "pattern": "GameBar.exe",
+      "pattern": "GameBar\\.exe|GameBarPresenceWriter\\.exe",
       "description": "Gaming overlay. Uses background resources even when not gaming. Safe to disable.",
+      "risk": "safe"
+    },
+    {
+      "name": "Spotify",
+      "publisher": "Spotify AB",
+      "pattern": "Spotify\\.exe",
+      "description": "Music streaming. Launches at startup to reduce open time. Safe to disable.",
+      "risk": "safe"
+    },
+    {
+      "name": "Discord",
+      "publisher": "Discord Inc.",
+      "pattern": "Discord\\.exe|Update\\.exe.*--processStart.*Discord",
+      "description": "Chat application. Auto-starts for notifications. Safe to disable and launch manually.",
+      "risk": "safe"
+    },
+    {
+      "name": "Skype",
+      "publisher": "Microsoft Corporation",
+      "pattern": "Skype\\.exe|SkypeApp\\.exe",
+      "description": "Legacy communication app. Uses resources in background. Safe to disable.",
+      "risk": "safe"
+    },
+    {
+      "name": "Adobe Creative Cloud",
+      "publisher": "Adobe Inc.",
+      "pattern": "Creative Cloud\\.exe|CCXProcess\\.exe|AdobeIPCBroker\\.exe|CCLibrary\\.exe|Adobe Desktop Service",
+      "description": "Adobe license manager and sync. Uses 200-400MB RAM. Safe to disable if not actively syncing.",
+      "risk": "safe"
+    },
+    {
+      "name": "iTunes Helper",
+      "publisher": "Apple Inc.",
+      "pattern": "iTunesHelper\\.exe|ApplePushService",
+      "description": "Auto-detects iOS devices. Safe to disable if not syncing Apple devices regularly.",
+      "risk": "safe"
+    },
+    {
+      "name": "Steam Client Bootstrapper",
+      "publisher": "Valve Corporation",
+      "pattern": "steam\\.exe|steamwebhelper\\.exe",
+      "description": "Gaming platform. Auto-starts for update checks. Safe to disable and launch manually.",
+      "risk": "safe"
+    },
+    {
+      "name": "Epic Games Launcher",
+      "publisher": "Epic Games, Inc.",
+      "pattern": "EpicGamesLauncher\\.exe|EpicWebHelper\\.exe",
+      "description": "Gaming platform. Runs background processes for updates. Safe to disable.",
+      "risk": "safe"
+    },
+    {
+      "name": "Zoom",
+      "publisher": "Zoom Video Communications",
+      "pattern": "Zoom\\.exe|ZoomInstaller\\.exe",
+      "description": "Video conferencing. Auto-starts for meeting join speed. Safe to disable.",
+      "risk": "safe"
+    },
+    {
+      "name": "Google Drive",
+      "publisher": "Google LLC",
+      "pattern": "GoogleDriveFS\\.exe|googledrivesync\\.exe",
+      "description": "Cloud storage sync. Safe to disable if not actively syncing.",
+      "risk": "safe"
+    },
+    {
+      "name": "Dropbox",
+      "publisher": "Dropbox, Inc.",
+      "pattern": "Dropbox\\.exe",
+      "description": "Cloud storage sync. Uses background resources. Safe to disable if not syncing.",
       "risk": "safe"
     }
   ]
