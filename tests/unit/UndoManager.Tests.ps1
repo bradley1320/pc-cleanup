@@ -74,7 +74,11 @@ Describe 'Register-AppliedTweak' {
         $fixedTime = [datetime]'2025-06-15T10:30:00'
         Register-AppliedTweak -Name 'TimeTweak' -Changes $changes -Timestamp $fixedTime -Category 'Privacy'
         $log = Get-Content -Path $script:UndoLogPath -Raw | ConvertFrom-Json
-        @($log)[0].AppliedAt | Should -BeLike '2025-06-15*'
+        # PS Core's ConvertFrom-Json auto-converts ISO 8601 to DateTime; verify date components directly
+        $parsed = [datetime]@($log)[0].AppliedAt
+        $parsed.Year | Should -Be 2025
+        $parsed.Month | Should -Be 6
+        $parsed.Day | Should -Be 15
     }
 }
 
