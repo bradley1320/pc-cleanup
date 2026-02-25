@@ -1,5 +1,5 @@
 # ==============================================================================
-# PC Cleanup v2 — QuickClean.ps1
+# PC Cleanup v2 -- QuickClean.ps1
 # Temporary/cache file cleanup with preview and user selection.
 # Scans targets, shows sizes, lets user pick what to clean.
 # ==============================================================================

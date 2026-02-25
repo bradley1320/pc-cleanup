@@ -1,7 +1,7 @@
 # ==============================================================================
-# PC Cleanup v2 — PrivacyShield.ps1
+# PC Cleanup v2 -- PrivacyShield.ps1
 # Privacy/telemetry tweaks from tweaks.json, organized by risk tier.
-# Thin UI wrapper — all tweak definitions live in tweaks.json.
+# Thin UI wrapper -- all tweak definitions live in tweaks.json.
 # ==============================================================================
 
 function Show-PrivacyMenu {

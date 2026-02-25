@@ -1,5 +1,5 @@
 # ==============================================================================
-# PC Cleanup v2 — ServiceHandler.ps1
+# PC Cleanup v2 -- ServiceHandler.ps1
 # Service start/stop and startup type changes.
 # Uses Stop-Service + Set-Service for immediate effect (not registry-only).
 # ==============================================================================
@@ -32,5 +32,34 @@ function Set-PCCleanupService {
         [switch]$StopFirst
     )
 
-    throw "Not implemented"
+    try {
+        $svc = Get-Service -Name $Name -ErrorAction SilentlyContinue
+        if ($null -eq $svc) {
+            Write-Warn "Service '$Name' not found on this system -- skipping."
+            return
+        }
+
+        if ($StopFirst -and $svc.Status -eq 'Running') {
+            Stop-Service -Name $Name -Force -ErrorAction SilentlyContinue
+            Write-Log "Service: Stopped '$Name'"
+        }
+
+        Set-Service -Name $Name -StartupType $StartupType
+        Write-Log "Service: Set '$Name' startup type to '$StartupType'"
+
+        # Post-apply verification -- some protected services silently revert
+        $verify = Get-Service -Name $Name
+        if ($verify.StartType -ne $StartupType) {
+            Write-Warn "Service '$Name' may have reverted -- protected by Windows. Requested '$StartupType', actual '$($verify.StartType)'."
+        }
+        else {
+            Write-Success "Service '$Name' set to '$StartupType'"
+        }
+    }
+    catch [System.UnauthorizedAccessException], [System.Security.SecurityException] {
+        Write-Err -Message "Cannot modify service '$Name'" -Cause 'Access denied - service is protected by Windows.' -Fix 'Run as Administrator, or check with your IT department.'
+    }
+    catch {
+        Write-Err -Message "Failed to modify service '$Name'" -Cause $_.Exception.Message -Fix 'Run as Administrator, or check that the service name is correct.'
+    }
 }

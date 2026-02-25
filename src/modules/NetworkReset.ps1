@@ -1,7 +1,7 @@
 # ==============================================================================
-# PC Cleanup v2 — NetworkReset.ps1
+# PC Cleanup v2 -- NetworkReset.ps1
 # Network troubleshooting: DNS flush, Winsock reset, TCP/IP reset.
-# ISOLATED from optimization flow — NOT included in Full Tune-Up.
+# ISOLATED from optimization flow -- NOT included in Full Tune-Up.
 # Heavy warnings about VPN/Hyper-V/Docker/static IP impact.
 # ==============================================================================
 

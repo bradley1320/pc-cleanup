@@ -1,5 +1,5 @@
 # ==============================================================================
-# PC Cleanup v2 — PerformanceMode.ps1
+# PC Cleanup v2 -- PerformanceMode.ps1
 # Performance optimizations: power plan, visual effects, gaming tweaks.
 # Thin UI wrapper around TweakEngine for "Performance" category tweaks.
 # ==============================================================================

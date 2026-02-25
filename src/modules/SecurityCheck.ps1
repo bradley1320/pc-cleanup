@@ -1,6 +1,6 @@
 # ==============================================================================
-# PC Cleanup v2 — SecurityCheck.ps1
-# Security health snapshot. Completely read-only — no modifications.
+# PC Cleanup v2 -- SecurityCheck.ps1
+# Security health snapshot. Completely read-only -- no modifications.
 # ==============================================================================
 
 function Get-DefenderStatus {

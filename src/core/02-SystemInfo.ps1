@@ -1,5 +1,5 @@
 # ==============================================================================
-# PC Cleanup v2 — 02-SystemInfo.ps1
+# PC Cleanup v2 -- 02-SystemInfo.ps1
 # System capability detection using feature detection over version checking
 # ==============================================================================
 
@@ -16,7 +16,14 @@ function Get-OSBuild {
     [CmdletBinding()]
     param()
 
-    throw "Not implemented"
+    try {
+        $regPath = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
+        [int](Get-ItemProperty -Path $regPath -Name CurrentBuildNumber).CurrentBuildNumber
+    }
+    catch {
+        Write-Warn "Could not read OS build number: $_"
+        return 0
+    }
 }
 
 function Test-IsSSD {
@@ -24,8 +31,8 @@ function Test-IsSSD {
     .SYNOPSIS
         Checks if a given drive is an SSD.
     .DESCRIPTION
-        Uses Get-PhysicalDisk MediaType to detect drive type.
-        Used to skip HDD-specific tweaks on SSDs.
+        Maps DriveLetter to physical disk via Get-Partition, then checks
+        Get-PhysicalDisk MediaType. Falls back to $false on error.
     .PARAMETER DriveLetter
         The drive letter to check (e.g. 'C').
     .OUTPUTS
@@ -37,7 +44,15 @@ function Test-IsSSD {
         [char]$DriveLetter
     )
 
-    throw "Not implemented"
+    try {
+        $partition = Get-Partition -DriveLetter $DriveLetter -ErrorAction Stop
+        $disk = Get-PhysicalDisk -DeviceNumber $partition.DiskNumber -ErrorAction Stop
+        return $disk.MediaType -eq 'SSD'
+    }
+    catch {
+        # Can't determine drive type -- assume not SSD (conservative default)
+        return $false
+    }
 }
 
 function Get-ChassisType {
@@ -53,7 +68,20 @@ function Get-ChassisType {
     [CmdletBinding()]
     param()
 
-    throw "Not implemented"
+    try {
+        $chassisType = (Get-CimInstance Win32_SystemEnclosure).ChassisTypes[0]
+        # Laptop chassis types per SMBIOS spec
+        if ($chassisType -in 8, 9, 10, 11, 12, 13, 14, 30, 31, 32) {
+            return 'Laptop'
+        }
+        if ($chassisType -eq 17) {
+            return 'Tablet'
+        }
+        return 'Desktop'
+    }
+    catch {
+        return 'Desktop'
+    }
 }
 
 function Test-FeatureExists {
@@ -66,9 +94,12 @@ function Test-FeatureExists {
     .PARAMETER RegistryPath
         The full registry path to check.
     .PARAMETER ValueName
-        The registry value name to check for.
+        Optional registry value name to check for. If omitted, checks
+        whether the key itself exists.
     .OUTPUTS
         [bool] $true if the feature exists, $false otherwise.
+    .EXAMPLE
+        Test-FeatureExists -RegistryPath 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot'
     #>
     [CmdletBinding()]
     param(
@@ -78,5 +109,17 @@ function Test-FeatureExists {
         [string]$ValueName
     )
 
-    throw "Not implemented"
+    try {
+        if (-not (Test-Path $RegistryPath)) {
+            return $false
+        }
+        if ([string]::IsNullOrEmpty($ValueName)) {
+            return $true
+        }
+        $prop = Get-ItemProperty -Path $RegistryPath -Name $ValueName -ErrorAction SilentlyContinue
+        return $null -ne $prop
+    }
+    catch {
+        return $false
+    }
 }

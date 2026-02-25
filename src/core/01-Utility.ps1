@@ -1,7 +1,7 @@
 # ==============================================================================
-# PC Cleanup v2 — 01-Utility.ps1
+# PC Cleanup v2 -- 01-Utility.ps1
 # Shared helper functions used by all modules
-# Loaded first — no dependencies on other project files
+# Loaded first -- no dependencies on other project files
 # ==============================================================================
 
 function Test-IsAdmin {
@@ -119,6 +119,9 @@ function Write-Log {
     <#
     .SYNOPSIS
         Appends a timestamped message to the session log file.
+    .DESCRIPTION
+        Logs to %LOCALAPPDATA%\PCCleanup\logs\PCCleanup_yyyy-MM-dd.log.
+        This function must NEVER throw -- all Write-* helpers depend on it.
     .PARAMETER Message
         The message to log.
     #>
@@ -128,7 +131,18 @@ function Write-Log {
         [string]$Message
     )
 
-    throw "Not implemented"
+    try {
+        $logDir = Join-Path $env:LOCALAPPDATA 'PCCleanup\logs'
+        if (-not (Test-Path $logDir)) {
+            New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+        }
+        $logFile = Join-Path $logDir "PCCleanup_$(Get-Date -Format 'yyyy-MM-dd').log"
+        $entry = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] $Message"
+        Add-Content -Path $logFile -Value $entry -ErrorAction SilentlyContinue
+    }
+    catch {
+        # Intentionally swallowed -- logging must never crash the script
+    }
 }
 
 function Get-UserConfirmation {
@@ -141,6 +155,8 @@ function Get-UserConfirmation {
         The default answer if the user presses Enter. 'Y' or 'N'.
     .OUTPUTS
         [bool] $true if confirmed, $false otherwise.
+    .EXAMPLE
+        if (Get-UserConfirmation "Apply safe tweaks?") { Invoke-TweakSet -Category Privacy }
     #>
     [CmdletBinding()]
     param(
@@ -151,18 +167,36 @@ function Get-UserConfirmation {
         [string]$Default = 'Y'
     )
 
-    throw "Not implemented"
+    try {
+        $response = Read-Host "$Prompt [Y/N] (default: $Default)"
+        if ([string]::IsNullOrWhiteSpace($response)) {
+            return $Default -eq 'Y'
+        }
+        return $response.Trim().ToUpper().StartsWith('Y')
+    }
+    catch {
+        # Non-interactive pipeline -- return the default
+        return $Default -eq 'Y'
+    }
 }
 
 function Pause-Script {
     <#
     .SYNOPSIS
         Pauses execution until the user presses Enter.
+    .EXAMPLE
+        Pause-Script
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseApprovedVerbs', '')]
     [CmdletBinding()]
     param()
 
-    throw "Not implemented"
+    try {
+        Read-Host 'Press Enter to continue...'
+    }
+    catch {
+        # Non-interactive pipeline -- skip the pause
+    }
 }
 
 function Format-FileSize {
@@ -173,6 +207,8 @@ function Format-FileSize {
         The number of bytes to format.
     .OUTPUTS
         [string] Formatted file size string.
+    .EXAMPLE
+        Format-FileSize -Bytes 1536  # Returns "1.50 KB"
     #>
     [CmdletBinding()]
     param(
@@ -180,5 +216,14 @@ function Format-FileSize {
         [long]$Bytes
     )
 
-    throw "Not implemented"
+    if ($Bytes -ge 1GB) {
+        return '{0:N2} GB' -f ($Bytes / 1GB)
+    }
+    if ($Bytes -ge 1MB) {
+        return '{0:N2} MB' -f ($Bytes / 1MB)
+    }
+    if ($Bytes -ge 1KB) {
+        return '{0:N2} KB' -f ($Bytes / 1KB)
+    }
+    return "$Bytes bytes"
 }

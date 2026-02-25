@@ -1,5 +1,5 @@
 # ==============================================================================
-# PC Cleanup v2 — StartupManager.ps1
+# PC Cleanup v2 -- StartupManager.ps1
 # View and manage startup programs with publisher, description, and risk context.
 # Cross-references apps-critical.json and apps-bloat.json for risk indicators.
 # ==============================================================================

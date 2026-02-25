@@ -1,5 +1,5 @@
 # ==============================================================================
-# PC Cleanup v2 — Menu.ps1
+# PC Cleanup v2 -- Menu.ps1
 # Terminal UI: banner, main menu, sub-menus, selection interface.
 # ==============================================================================
 

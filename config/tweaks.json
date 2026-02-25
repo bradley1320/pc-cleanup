@@ -91,5 +91,75 @@
     ],
     "invokeScript": [],
     "undoScript": []
+  },
+
+  "DisableActivityHistory": {
+    "name": "Disable Activity History",
+    "description": "Prevents Windows from collecting and sending your activity history to Microsoft.",
+    "detail": "Windows Timeline and Activity History track which apps, files, and websites you use, and can sync this across devices via your Microsoft account. Disabling it stops local collection and cloud sync of activity data. This removes Timeline functionality in Task View but has no impact on other features.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/privacy/manage-connections-from-windows-operating-system-components-to-microsoft-services#16-activity-history",
+    "category": "Privacy",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [
+      {
+        "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+        "name": "EnableActivityFeed",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      },
+      {
+        "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+        "name": "PublishUserActivities",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      },
+      {
+        "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+        "name": "UploadUserActivities",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableErrorReporting": {
+    "name": "Disable Windows Error Reporting",
+    "description": "Disables automatic error reporting to Microsoft when apps crash.",
+    "detail": "Windows Error Reporting (WER) sends crash dumps and diagnostic data to Microsoft when applications fail. Disabling it stops the WerSvc service and prevents crash data from being transmitted. You will still see error dialogs locally, but no data is sent to Microsoft. This is safe to disable for personal use.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/win32/wer/windows-error-reporting",
+    "category": "Privacy",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [
+      {
+        "path": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting",
+        "name": "Disabled",
+        "value": 1,
+        "type": "DWord",
+        "defaultValue": 0
+      }
+    ],
+    "services": [
+      {
+        "name": "WerSvc",
+        "startupType": "Disabled",
+        "defaultType": "Manual"
+      }
+    ],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
   }
 }

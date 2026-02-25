@@ -1,5 +1,5 @@
 # ==============================================================================
-# PC Cleanup v2 — FullTuneUp.ps1
+# PC Cleanup v2 -- FullTuneUp.ps1
 # Orchestrates safe-tier cleanup + performance + privacy in one flow.
 # Only applies safe-tier tweaks. Does NOT include Network Reset.
 # ==============================================================================

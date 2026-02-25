@@ -1,5 +1,5 @@
 # ==============================================================================
-# PC Cleanup v2 — SystemReport.ps1
+# PC Cleanup v2 -- SystemReport.ps1
 # Before/after metrics collection and comparison.
 # Uses Event ID 100 for boot timing with CIM fallback.
 # ==============================================================================

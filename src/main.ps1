@@ -1,5 +1,5 @@
 # ==============================================================================
-# PC Cleanup v2 — main.ps1
+# PC Cleanup v2 -- main.ps1
 # Entry point: parameter parsing, module loading, UI launch.
 # Built with Claude Code (Anthropic). Open source and fully auditable.
 # ==============================================================================
@@ -35,7 +35,7 @@ param(
 
 # --- Module Loading ---
 # Load order is critical: core (01-05) -> handlers -> modules -> ui
-# All paths resolved via $PSScriptRoot — never relative to working directory
+# All paths resolved via $PSScriptRoot -- never relative to working directory
 
 $corePath     = Join-Path $PSScriptRoot 'core'
 $handlerPath  = Join-Path $PSScriptRoot 'handlers'

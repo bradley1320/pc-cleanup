@@ -1,5 +1,5 @@
 # ==============================================================================
-# PC Cleanup v2 — 05-UndoManager.ps1
+# PC Cleanup v2 -- 05-UndoManager.ps1
 # Tracks applied tweaks with full original state captured at apply time.
 # Enables per-tweak and bulk undo. Persists to undo_log.json between sessions.
 # ==============================================================================
@@ -39,7 +39,38 @@ function Register-AppliedTweak {
         [string]$Category
     )
 
-    throw "Not implemented"
+    try {
+        if (-not (Test-Path $script:UndoLogDir)) {
+            New-Item -ItemType Directory -Path $script:UndoLogDir -Force | Out-Null
+        }
+
+        # Load existing log or start fresh
+        $log = @()
+        if (Test-Path $script:UndoLogPath) {
+            $raw = Get-Content -Path $script:UndoLogPath -Raw
+            if (-not [string]::IsNullOrWhiteSpace($raw)) {
+                $parsed = $raw | ConvertFrom-Json
+                # ConvertFrom-Json returns a single object if there's one entry -- normalize to array
+                $log = @($parsed)
+            }
+        }
+
+        $entry = [PSCustomObject]@{
+            TweakName      = $Name
+            AppliedAt      = $Timestamp.ToString('o')
+            AppliedOnBuild = Get-OSBuild
+            Category       = $Category
+            Changes        = $Changes
+        }
+
+        $log += $entry
+        $log | ConvertTo-Json -Depth 10 | Set-Content -Path $script:UndoLogPath -Encoding UTF8
+
+        Write-Log "UndoManager: Registered '$Name' with $($Changes.Count) change(s)"
+    }
+    catch {
+        Write-Err -Message "Failed to register undo data for '$Name'" -Cause $_.Exception.Message -Fix 'Check write permissions to %LOCALAPPDATA%\PCCleanup.'
+    }
 }
 
 function Get-AppliedTweaks {
@@ -55,7 +86,22 @@ function Get-AppliedTweaks {
     [CmdletBinding()]
     param()
 
-    throw "Not implemented"
+    if (-not (Test-Path $script:UndoLogPath)) {
+        return @()
+    }
+
+    try {
+        $raw = Get-Content -Path $script:UndoLogPath -Raw
+        if ([string]::IsNullOrWhiteSpace($raw)) {
+            return @()
+        }
+        $parsed = $raw | ConvertFrom-Json
+        return @($parsed)
+    }
+    catch {
+        Write-Warn "Undo log is corrupted: $($_.Exception.Message). Consider using System Restore Point."
+        return @()
+    }
 }
 
 function Invoke-UndoTweak {
@@ -75,7 +121,62 @@ function Invoke-UndoTweak {
         [string]$Name
     )
 
-    throw "Not implemented"
+    $log = Get-AppliedTweaks
+    $entry = $log | Where-Object { $_.TweakName -eq $Name } | Select-Object -Last 1
+
+    if ($null -eq $entry) {
+        Write-Warn "No undo data found for '$Name' -- it may not have been applied through PC Cleanup."
+        return
+    }
+
+    # Warn if OS build changed since apply
+    $currentBuild = Get-OSBuild
+    if ($entry.AppliedOnBuild -and $entry.AppliedOnBuild -ne $currentBuild) {
+        Write-Warn "This tweak was applied on build $($entry.AppliedOnBuild). Current build is $currentBuild. Undo values may not match current OS defaults."
+    }
+
+    Write-Info "Undoing '$Name'..."
+
+    foreach ($change in $entry.Changes) {
+        try {
+            $changeType = [string]$change.Type
+            if ($changeType -eq 'Registry') {
+                if ($change.KeyExistedBefore -eq $false) {
+                    # Value didn't exist before -- remove it
+                    Set-PCCleanupRegistry -Path $change.Path -Name $change.Name -Value '<RemoveEntry>' -Type 'DWord'
+                }
+                else {
+                    Set-PCCleanupRegistry -Path $change.Path -Name $change.Name -Value $change.OriginalValue -Type $change.OriginalType
+                }
+            }
+            elseif ($changeType -eq 'Service') {
+                Set-PCCleanupService -Name $change.Name -StartupType $change.OriginalStartupType
+                if ($change.OriginalStatus -eq 'Running') {
+                    Start-Service -Name $change.Name -ErrorAction SilentlyContinue
+                }
+            }
+            elseif ($changeType -eq 'ScheduledTask') {
+                Set-PCCleanupScheduledTask -TaskPath $change.Path -Enabled $change.OriginalEnabled
+            }
+        }
+        catch {
+            $errDetail = "Failed to undo change ($($change.Type): $($change.Name))"
+            Write-Err -Message $errDetail -Cause $_.Exception.Message -Fix 'Try using System Restore Point to revert all changes.'
+        }
+    }
+
+    # Remove entry from log
+    $remaining = @($log | Where-Object { $_.TweakName -ne $Name -or $_.AppliedAt -ne $entry.AppliedAt })
+    if ($remaining.Count -eq 0) {
+        # Write empty array so the file stays valid JSON
+        '[]' | Set-Content -Path $script:UndoLogPath -Encoding UTF8
+    }
+    else {
+        $remaining | ConvertTo-Json -Depth 10 | Set-Content -Path $script:UndoLogPath -Encoding UTF8
+    }
+
+    Write-Success "Undone '$Name'"
+    Write-Log "UndoManager: Undone '$Name'"
 }
 
 function Invoke-UndoAll {
@@ -89,5 +190,20 @@ function Invoke-UndoAll {
     [CmdletBinding()]
     param()
 
-    throw "Not implemented"
+    $log = Get-AppliedTweaks
+    if ($log.Count -eq 0) {
+        Write-Info 'No applied tweaks to undo.'
+        return
+    }
+
+    Write-Info "Undoing $($log.Count) applied tweak(s) in reverse order..."
+
+    # Sort by AppliedAt descending (most recent first)
+    $sorted = $log | Sort-Object -Property AppliedAt -Descending
+
+    foreach ($entry in $sorted) {
+        Invoke-UndoTweak -Name $entry.TweakName
+    }
+
+    Write-Success 'All applied tweaks have been undone.'
 }

@@ -1,5 +1,5 @@
 # ==============================================================================
-# PC Cleanup v2 — DiskAnalysis.ps1
+# PC Cleanup v2 -- DiskAnalysis.ps1
 # Disk usage visualization and folder size analysis. Completely read-only.
 # ==============================================================================
 
