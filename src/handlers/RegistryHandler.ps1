@@ -25,7 +25,7 @@ function Set-PCCleanupRegistry {
     .PARAMETER Type
         The registry value type: DWord, QWord, String, ExpandString, MultiString, Binary.
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory)]
         [string]$Path,

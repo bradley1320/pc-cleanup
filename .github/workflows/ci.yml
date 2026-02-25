@@ -26,7 +26,7 @@ jobs:
       - name: Run PSScriptAnalyzer
         shell: pwsh
         run: |
-          $results = Invoke-ScriptAnalyzer -Path src/ -Recurse -Severity Warning,Error
+          $results = Invoke-ScriptAnalyzer -Path src/ -Recurse -Severity Warning,Error -Settings .psscriptanalyzerrc.psd1
           if ($results) {
               $results | Format-Table -AutoSize
               throw "PSScriptAnalyzer found $($results.Count) issue(s)."

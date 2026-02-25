@@ -17,7 +17,7 @@ function New-SafetyRestorePoint {
     .OUTPUTS
         [bool] $true if created successfully, $false if skipped/failed.
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess)]
     param()
 
     if (-not (Test-IsAdmin)) {
@@ -36,6 +36,7 @@ function New-SafetyRestorePoint {
         }
         catch {
             # Can't determine -- try anyway
+            $null = $_
         }
 
         if (-not $srEnabled) {
@@ -59,6 +60,7 @@ function New-SafetyRestorePoint {
         }
         catch {
             # Can't check -- proceed to create
+            $null = $_
         }
 
         # Create with timeout using a background job
@@ -108,6 +110,7 @@ function Backup-RegistryHive {
     .EXAMPLE
         Backup-RegistryHive -Path 'HKLM:\SOFTWARE\Policies' -OutputDir "$env:LOCALAPPDATA\PCCleanup\backups"
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Params used in expressions and string interpolation')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -171,6 +174,7 @@ function Get-SafetyStatus {
     }
     catch {
         # Can't query restore points -- leave at 0
+        $null = $_
     }
 
     $backupCount = 0
@@ -193,6 +197,7 @@ function Get-SafetyStatus {
         }
         catch {
             # Corrupted log -- leave at 0
+            $null = $_
         }
     }
 

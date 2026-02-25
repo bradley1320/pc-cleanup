@@ -33,6 +33,7 @@ function Get-FolderSizes {
     .OUTPUTS
         [PSCustomObject[]] Array of folder objects with Path and Size.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Stub -- params used when implemented')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

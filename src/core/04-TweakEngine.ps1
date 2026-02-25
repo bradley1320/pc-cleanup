@@ -105,6 +105,7 @@ function Get-Tweaks {
     .OUTPUTS
         [PSCustomObject[]] Array of tweak objects matching the filters.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Params used in Where-Object filters and switch')]
     [CmdletBinding()]
     param(
         [string]$Category,
@@ -187,6 +188,7 @@ function Invoke-Tweak {
         Invoke-Tweak -Name 'DisableAdvertisingID'
         Invoke-Tweak -Name 'DisableAdvertisingID' -Undo
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Params used in expressions and cmdlet calls')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

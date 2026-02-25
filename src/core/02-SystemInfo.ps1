@@ -38,6 +38,7 @@ function Test-IsSSD {
     .OUTPUTS
         [bool] $true if SSD, $false otherwise.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'DriveLetter', Justification = 'Used as cmdlet argument')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -101,6 +102,7 @@ function Test-FeatureExists {
     .EXAMPLE
         Test-FeatureExists -RegistryPath 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot'
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Params used as cmdlet arguments')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

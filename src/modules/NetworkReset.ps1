@@ -12,7 +12,8 @@ function Reset-DNSCache {
     .DESCRIPTION
         Runs ipconfig /flushdns. Low-risk, no reboot needed.
     #>
-    [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSShouldProcess', '', Justification = 'Stub -- ShouldProcess calls added when implemented')]
+    [CmdletBinding(SupportsShouldProcess)]
     param()
 
     throw "Not implemented"
@@ -27,7 +28,8 @@ function Reset-WinsockCatalog {
         WARNING: Destroys Hyper-V virtual switches, Docker networking,
         VPN configs, and LSP entries.
     #>
-    [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSShouldProcess', '', Justification = 'Stub -- ShouldProcess calls added when implemented')]
+    [CmdletBinding(SupportsShouldProcess)]
     param()
 
     throw "Not implemented"
@@ -42,7 +44,8 @@ function Reset-TCPIPStack {
         WARNING: Resets all static IP configurations, custom MTU settings,
         and network interface parameters.
     #>
-    [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSShouldProcess', '', Justification = 'Stub -- ShouldProcess calls added when implemented')]
+    [CmdletBinding(SupportsShouldProcess)]
     param()
 
     throw "Not implemented"

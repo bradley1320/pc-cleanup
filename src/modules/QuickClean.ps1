@@ -31,6 +31,7 @@ function Invoke-Cleanup {
     .PARAMETER Targets
         Array of target objects (from Get-CleanupTargets) to clean.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Stub -- params used when implemented')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

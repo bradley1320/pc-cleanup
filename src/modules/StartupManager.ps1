@@ -33,6 +33,7 @@ function Disable-StartupProgram {
     .PARAMETER Name
         The name of the startup program to disable.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Stub -- params used when implemented')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -51,6 +52,7 @@ function Enable-StartupProgram {
     .PARAMETER Name
         The name of the startup program to re-enable.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Stub -- params used when implemented')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

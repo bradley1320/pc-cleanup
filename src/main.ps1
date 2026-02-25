@@ -4,11 +4,12 @@
 # Built with Claude Code (Anthropic). Open source and fully auditable.
 # ==============================================================================
 
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Params used when CLI dispatch is implemented in Phase 5')]
 [CmdletBinding()]
 param(
     # Apply a preset profile (Safe, Gaming, Privacy, Custom)
     [ValidateSet('Safe', 'Gaming', 'Privacy', 'Custom')]
-    [string]$Profile,
+    [string]$ProfileName,
 
     # Run a specific module directly
     [ValidateSet('QuickClean', 'Startup', 'Performance', 'Privacy',

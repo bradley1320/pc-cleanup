@@ -45,6 +45,7 @@ function Show-SelectionMenu {
     .OUTPUTS
         [array] The selected items.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Stub -- params used when implemented')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

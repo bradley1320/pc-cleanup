@@ -18,7 +18,7 @@ function Set-PCCleanupScheduledTask {
     .EXAMPLE
         Set-PCCleanupScheduledTask -TaskPath '\Microsoft\Windows\Customer Experience Improvement Program\Consolidator' -Enabled $false
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory)]
         [string]$TaskPath,
@@ -42,6 +42,9 @@ function Set-PCCleanupScheduledTask {
             Write-Skip "Scheduled task '$TaskPath' not found on this system -- skipping."
             return
         }
+
+        $action = if ($Enabled) { 'Enable' } else { 'Disable' }
+        if (-not $PSCmdlet.ShouldProcess($TaskPath, $action)) { return }
 
         if ($Enabled) {
             Enable-ScheduledTask -TaskPath $folder -TaskName $taskName | Out-Null

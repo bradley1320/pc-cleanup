@@ -20,7 +20,7 @@ function Set-PCCleanupService {
     .PARAMETER StopFirst
         If specified, stops the service before changing startup type.
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory)]
         [string]$Name,

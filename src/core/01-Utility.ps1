@@ -125,6 +125,7 @@ function Write-Log {
     .PARAMETER Message
         The message to log.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'Message', Justification = 'Used in string interpolation')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -142,6 +143,7 @@ function Write-Log {
     }
     catch {
         # Intentionally swallowed -- logging must never crash the script
+        $null = $_
     }
 }
 
@@ -158,6 +160,7 @@ function Get-UserConfirmation {
     .EXAMPLE
         if (Get-UserConfirmation "Apply safe tweaks?") { Invoke-TweakSet -Category Privacy }
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Params used in string interpolation and expressions')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -196,6 +199,7 @@ function Pause-Script {
     }
     catch {
         # Non-interactive pipeline -- skip the pause
+        $null = $_
     }
 }
 
@@ -210,6 +214,7 @@ function Format-FileSize {
     .EXAMPLE
         Format-FileSize -Bytes 1536  # Returns "1.50 KB"
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'Bytes', Justification = 'Used in comparison expressions and format operator')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

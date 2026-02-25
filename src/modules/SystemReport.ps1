@@ -32,6 +32,7 @@ function Save-SystemSnapshot {
     .PARAMETER Label
         A label for the snapshot (e.g. 'Before', 'After').
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Stub -- params used when implemented')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

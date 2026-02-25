@@ -30,6 +30,7 @@ function Show-TweakInfo {
     .PARAMETER Name
         The TweakID to display info for.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Stub -- params used when implemented')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
