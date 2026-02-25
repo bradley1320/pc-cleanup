@@ -131,9 +131,11 @@ function Get-Tweaks {
         $tweaks += $tweak
     }
 
-    # Schema validation on first load
+    # Schema validation on first load (skip for empty catalogs)
     if (-not $script:SchemaValidated) {
-        Test-TweakSchema -Tweaks $tweaks
+        if ($tweaks.Count -gt 0) {
+            Test-TweakSchema -Tweaks $tweaks
+        }
         $script:SchemaValidated = $true
     }
 
@@ -195,6 +197,14 @@ function Invoke-Tweak {
 
     if ($Undo) {
         Invoke-UndoTweak -Name $Name
+        return
+    }
+
+    # Idempotency guard -- skip if tweak is already applied (in undo log)
+    $appliedTweaks = Get-AppliedTweaks
+    $alreadyApplied = @($appliedTweaks | Where-Object { $_.TweakName -eq $Name })
+    if ($alreadyApplied.Count -gt 0) {
+        Write-Info "'$Name' is already applied. Undo it first before re-applying."
         return
     }
 

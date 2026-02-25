@@ -128,7 +128,7 @@ function Backup-RegistryHive {
         $fileName = "PCCleanup_${safeName}_${timestamp}.reg"
         $outputFile = Join-Path $OutputDir $fileName
 
-        # Convert PowerShell path to reg.exe format (HKLM: → HKLM\, HKCU: → HKCU\)
+        # Convert PowerShell path to reg.exe format (HKLM: --> HKLM\, HKCU: --> HKCU\)
         $regPath = $Path -replace ':', ''
 
         $result = reg.exe export $regPath $outputFile /y 2>&1

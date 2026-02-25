@@ -20,8 +20,14 @@ function Invoke-PCCleanupScript {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
+        [AllowEmptyString()]
         [string]$ScriptBlock
     )
+
+    if ([string]::IsNullOrWhiteSpace($ScriptBlock)) {
+        Write-Log 'Script: Skipping empty script block'
+        return
+    }
 
     try {
         Write-Log "Script: Executing script block: $ScriptBlock"
