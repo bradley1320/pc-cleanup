@@ -353,6 +353,135 @@ Describe 'Invoke-Tweak' {
         Invoke-Tweak -Name 'NonexistentTweak'
         Should -Invoke Write-Host -ParameterFilter { $Object -like '*not found*' }
     }
+
+    It 'should register script undo data for tweaks with undoScript only' {
+        # Add a script-only tweak with undoScript
+        $testTweaks = @{
+            'ScriptOnlyTweak' = @{
+                name = 'Script Only Tweak'
+                description = 'Tweak with only invokeScript and undoScript'
+                detail = 'Detail'
+                docsUrl = 'https://example.com'
+                category = 'Privacy'
+                risk = 'safe'
+                minBuild = $null
+                maxBuild = $null
+                requiresAdmin = $false
+                registry = @()
+                services = @()
+                scheduledTasks = @()
+                invokeScript = @('Write-Host "apply"')
+                undoScript = @('Write-Host "undo"')
+            }
+        }
+        $testTweaks | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $TestDrive 'tweaks.json')
+        Invoke-Tweak -Name 'ScriptOnlyTweak'
+        $log = Get-AppliedTweaks
+        @($log).Count | Should -BeGreaterThan 0
+        $entry = @($log | Where-Object { $_.TweakName -eq 'ScriptOnlyTweak' })
+        $entry.Count | Should -Be 1
+        $entry[0].Changes[0].Type | Should -Be 'Script'
+    }
+
+    It 'should not register undo when undoScript is empty' {
+        Invoke-Tweak -Name 'TestScriptTweak'
+        $log = Get-AppliedTweaks
+        @($log | Where-Object { $_.TweakName -eq 'TestScriptTweak' }).Count | Should -Be 0
+    }
+
+    It 'should NOT store UndoCommands in undo_log.json (security: prevents injection)' {
+        $testTweaks = @{
+            'ScriptSecurityTweak' = @{
+                name = 'Script Security Tweak'
+                description = 'Tweak to test undo command storage'
+                detail = 'Detail'
+                docsUrl = 'https://example.com'
+                category = 'Privacy'
+                risk = 'safe'
+                minBuild = $null
+                maxBuild = $null
+                requiresAdmin = $false
+                registry = @()
+                services = @()
+                scheduledTasks = @()
+                invokeScript = @('Write-Host "apply"')
+                undoScript = @('Write-Host "undo"')
+            }
+        }
+        $testTweaks | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $TestDrive 'tweaks.json')
+        Invoke-Tweak -Name 'ScriptSecurityTweak'
+        $log = Get-AppliedTweaks
+        $entry = @($log | Where-Object { $_.TweakName -eq 'ScriptSecurityTweak' })
+        # Verify no UndoCommands field in the stored change
+        $entry[0].Changes[0].PSObject.Properties.Name | Should -Not -Contain 'UndoCommands'
+    }
+
+    It 'should execute undoScript from tweaks.json at undo time (not from undo log)' {
+        # Set up tweaks.json with the undoScript
+        $testTweaks = @{
+            'ScriptUndoTest' = @{
+                name = 'Script Undo Test'
+                description = 'Test script undo lookup'
+                detail = 'Detail'
+                docsUrl = 'https://example.com'
+                category = 'Privacy'
+                risk = 'safe'
+                minBuild = $null
+                maxBuild = $null
+                requiresAdmin = $false
+                registry = @()
+                services = @()
+                scheduledTasks = @()
+                invokeScript = @('Write-Host "apply"')
+                undoScript = @('Write-Host "undone from tweaks.json"')
+            }
+        }
+        $testTweaks | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $TestDrive 'tweaks.json')
+        # Register a Script undo marker (no UndoCommands stored)
+        $scriptChanges = @([PSCustomObject]@{ Type = 'Script' })
+        Register-AppliedTweak -Name 'ScriptUndoTest' -Changes $scriptChanges -Category 'Privacy'
+        Invoke-UndoTweak -Name 'ScriptUndoTest'
+        Should -Invoke Invoke-PCCleanupScript -Times 1 -ParameterFilter { $ScriptBlock -eq 'Write-Host "undone from tweaks.json"' }
+    }
+
+    It 'should register Script marker for hybrid tweaks (registry + undoScript)' {
+        $testTweaks = @{
+            'HybridTweak' = @{
+                name = 'Hybrid Tweak'
+                description = 'Tweak with both registry and undoScript'
+                detail = 'Detail'
+                docsUrl = 'https://example.com'
+                category = 'Privacy'
+                risk = 'safe'
+                minBuild = $null
+                maxBuild = $null
+                requiresAdmin = $false
+                registry = @(@{ path = 'HKCU:\Test'; name = 'Val'; value = 0; type = 'DWord'; defaultValue = 1 })
+                services = @()
+                scheduledTasks = @()
+                invokeScript = @('Write-Host "apply script part"')
+                undoScript = @('Write-Host "undo script part"')
+            }
+        }
+        $testTweaks | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $TestDrive 'tweaks.json')
+        Invoke-Tweak -Name 'HybridTweak'
+        $log = Get-AppliedTweaks
+        $entry = @($log | Where-Object { $_.TweakName -eq 'HybridTweak' })
+        $entry.Count | Should -Be 1
+        # Should have both Registry and Script changes
+        $changeTypes = @($entry[0].Changes | ForEach-Object { $_.Type })
+        $changeTypes | Should -Contain 'Registry'
+        $changeTypes | Should -Contain 'Script'
+    }
+
+    It 'should warn when tweaks.json missing during script undo' {
+        $scriptChanges = @([PSCustomObject]@{ Type = 'Script' })
+        Register-AppliedTweak -Name 'MissingJsonTweak' -Changes $scriptChanges -Category 'Privacy'
+        # Point config to a nonexistent path
+        $script:ConfigPath = Join-Path $TestDrive 'nonexistent_config'
+        Invoke-UndoTweak -Name 'MissingJsonTweak'
+        Should -Invoke Write-Host -ParameterFilter { $Object -like '*Cannot execute script undo*' }
+    }
 }
 
 Describe 'Invoke-TweakSet' {

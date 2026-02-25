@@ -158,6 +158,27 @@ function Invoke-UndoTweak {
             elseif ($changeType -eq 'ScheduledTask') {
                 Set-PCCleanupScheduledTask -TaskPath $change.Path -Enabled $change.OriginalEnabled
             }
+            elseif ($changeType -eq 'Script') {
+                # SECURITY: Undo commands are read from tweaks.json (shipped config),
+                # NOT from undo_log.json (user-writable). This prevents privilege
+                # escalation via undo log tampering. $script:ConfigPath is set by
+                # 04-TweakEngine.ps1 which loads before this module.
+                $tweaksPath = Join-Path $script:ConfigPath 'tweaks.json'
+                if (Test-Path $tweaksPath) {
+                    $tweakDef = (Get-Content -Path $tweaksPath -Raw | ConvertFrom-Json).$($entry.TweakName)
+                    if ($tweakDef -and $tweakDef.undoScript -and $tweakDef.undoScript.Count -gt 0) {
+                        foreach ($cmd in $tweakDef.undoScript) {
+                            Invoke-PCCleanupScript -ScriptBlock $cmd
+                        }
+                    }
+                    else {
+                        Write-Warn "No undoScript found in tweaks.json for '$($entry.TweakName)'. The tweak definition may have changed."
+                    }
+                }
+                else {
+                    Write-Err -Message "Cannot execute script undo for '$($entry.TweakName)'" -Cause 'tweaks.json not found' -Fix 'Restore tweaks.json from original ZIP.'
+                }
+            }
         }
         catch {
             $errDetail = "Failed to undo change ($($change.Type): $($change.Name))"

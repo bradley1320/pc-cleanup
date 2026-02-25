@@ -5,10 +5,12 @@
 BeforeAll {
     . "$PSScriptRoot/../../src/core/01-Utility.ps1"
     . "$PSScriptRoot/../../src/core/02-SystemInfo.ps1"
+    . "$PSScriptRoot/../../src/core/04-TweakEngine.ps1"
     . "$PSScriptRoot/../../src/core/05-UndoManager.ps1"
     . "$PSScriptRoot/../../src/handlers/RegistryHandler.ps1"
     . "$PSScriptRoot/../../src/handlers/ServiceHandler.ps1"
     . "$PSScriptRoot/../../src/handlers/TaskHandler.ps1"
+    . "$PSScriptRoot/../../src/handlers/ScriptHandler.ps1"
 }
 
 Describe 'Register-AppliedTweak' {

@@ -271,9 +271,22 @@ function Invoke-Tweak {
         }
     }
 
-    # Register with UndoManager before applying (skip for script-only tweaks with no state to capture)
+    # Register with UndoManager before applying.
+    # SECURITY: Script undo markers store only Type='Script' -- no raw commands.
+    # Undo commands are read from tweaks.json at undo time to prevent privilege
+    # escalation via undo_log.json tampering (council audit finding).
+    $hasUndoScript = $tweak.undoScript -and $tweak.undoScript.Count -gt 0
     if ($allChanges.Count -gt 0) {
+        # Hybrid tweaks: include Script marker alongside declarative changes
+        if ($hasUndoScript) {
+            $allChanges += [PSCustomObject]@{ Type = 'Script' }
+        }
         Register-AppliedTweak -Name $Name -Changes $allChanges -Category $tweak.category
+    }
+    elseif ($hasUndoScript) {
+        # Script-only tweaks (no declarative state changes)
+        $scriptChanges = @([PSCustomObject]@{ Type = 'Script' })
+        Register-AppliedTweak -Name $Name -Changes $scriptChanges -Category $tweak.category
     }
 
     # Apply target values
