@@ -130,74 +130,70 @@ function Get-CleanupTargets {
         cache, and prefetch. Returns a list of targets with file counts and
         total sizes for user preview. Uses SafeFileOps reparse point checks
         during scanning. Never follows junctions or symlinks.
+
+        With -ShowProgress, displays each target as it finishes scanning
+        so the user sees results immediately instead of a blank screen.
+    .PARAMETER ShowProgress
+        Display each target's scan result to the console as it completes.
     .OUTPUTS
         [PSCustomObject[]] Array of cleanup targets with Name, Path, FileCount,
-        Size, Type, and RequiresAdmin properties.
+        Size, Estimated, Type, and RequiresAdmin properties.
     #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns', '', Justification = 'Returns multiple cleanup targets')]
     [CmdletBinding()]
-    param()
+    param(
+        [switch]$ShowProgress
+    )
 
     $targets = @()
 
-    # --- User Temp Files ---
-    $userTemp = $env:TEMP
-    if (Test-Path -LiteralPath $userTemp) {
-        $scan = Measure-DirectorySafe -Path $userTemp
-        $targets += [PSCustomObject]@{
-            Name          = 'User Temp Files'
-            Path          = $userTemp
-            FileCount     = $scan.FileCount
-            Size          = $scan.TotalBytes
-            Type          = 'temp'
-            RequiresAdmin = $false
-        }
+    if ($ShowProgress) {
+        Write-Host ''
+        Write-Host '  Scanning cleanup targets...' -ForegroundColor Cyan
     }
 
-    # --- Windows Temp ---
-    $winTemp = "$env:SystemRoot\Temp"
-    if (Test-Path -LiteralPath $winTemp) {
-        $scan = Measure-DirectorySafe -Path $winTemp
-        $targets += [PSCustomObject]@{
-            Name          = 'Windows Temp Files'
-            Path          = $winTemp
-            FileCount     = $scan.FileCount
-            Size          = $scan.TotalBytes
-            Type          = 'temp'
-            RequiresAdmin = $true
-        }
-    }
+    # Scan definitions: Name, Hint, Path, Type, RequiresAdmin
+    $scanDefs = @(
+        @{ Name = 'User Temp Files'; Hint = 'Leftover files from apps and installers, safe to delete'; Path = $env:TEMP; Type = 'temp'; RequiresAdmin = $false }
+        @{ Name = 'Windows Temp Files'; Hint = 'System temporary files, safe to delete'; Path = "$env:SystemRoot\Temp"; Type = 'temp'; RequiresAdmin = $true }
+        @{ Name = 'Windows Update Cache'; Hint = 'Downloaded update packages already installed'; Path = "$env:SystemRoot\SoftwareDistribution\Download"; Type = 'wucache'; RequiresAdmin = $true }
+        @{ Name = 'Prefetch Files'; Hint = 'App launch optimization cache, regenerates automatically'; Path = "$env:SystemRoot\Prefetch"; Type = 'prefetch'; RequiresAdmin = $true }
+    )
 
-    # --- Windows Update Cache ---
-    $wuCache = "$env:SystemRoot\SoftwareDistribution\Download"
-    if (Test-Path -LiteralPath $wuCache) {
-        $scan = Measure-DirectorySafe -Path $wuCache
-        $targets += [PSCustomObject]@{
-            Name          = 'Windows Update Cache'
-            Path          = $wuCache
-            FileCount     = $scan.FileCount
-            Size          = $scan.TotalBytes
-            Type          = 'wucache'
-            RequiresAdmin = $true
-        }
-    }
+    foreach ($def in $scanDefs) {
+        if (-not (Test-Path -LiteralPath $def.Path)) { continue }
 
-    # --- Prefetch ---
-    $prefetch = "$env:SystemRoot\Prefetch"
-    if (Test-Path -LiteralPath $prefetch) {
-        $scan = Measure-DirectorySafe -Path $prefetch
-        $targets += [PSCustomObject]@{
-            Name          = 'Prefetch Files'
-            Path          = $prefetch
+        if ($ShowProgress) { Write-Host "    Scanning $($def.Name)..." -ForegroundColor Gray -NoNewline }
+
+        $scan = Measure-DirectorySafe -Path $def.Path
+        $target = [PSCustomObject]@{
+            Name          = $def.Name
+            Hint          = $def.Hint
+            Path          = $def.Path
             FileCount     = $scan.FileCount
             Size          = $scan.TotalBytes
-            Type          = 'prefetch'
-            RequiresAdmin = $true
+            Estimated     = $scan.Estimated
+            Type          = $def.Type
+            RequiresAdmin = $def.RequiresAdmin
+        }
+        $targets += $target
+
+        if ($ShowProgress) {
+            $sizeText = Format-FileSize -Bytes $scan.TotalBytes
+            if ($scan.Estimated) {
+                Write-Host "`r    $($def.Name): $($scan.FileCount)+ files, ~$sizeText (estimated)     " -ForegroundColor Yellow
+            }
+            else {
+                Write-Host "`r    $($def.Name): $($scan.FileCount) files, $sizeText     " -ForegroundColor White
+            }
         }
     }
 
     # --- Browser Caches ---
+    if ($ShowProgress) { Write-Host '    Scanning browser caches...' -ForegroundColor Gray -NoNewline }
+
     $browsers = Get-BrowserProfiles
+    $browserCount = 0
     foreach ($browser in $browsers) {
         $scan = Measure-DirectorySafe -Path $browser.CachePath
         if ($scan.FileCount -gt 0) {
@@ -205,15 +201,37 @@ function Get-CleanupTargets {
             if ($browser.Profile -ne 'Default') {
                 $displayName = "$($browser.Browser) Cache ($($browser.Profile))"
             }
-            $targets += [PSCustomObject]@{
+            $target = [PSCustomObject]@{
                 Name          = $displayName
+                Hint          = 'Cached web pages and images, regenerates as you browse'
                 Path          = $browser.CachePath
                 FileCount     = $scan.FileCount
                 Size          = $scan.TotalBytes
+                Estimated     = $scan.Estimated
                 Type          = 'browser'
                 RequiresAdmin = $false
             }
+            $targets += $target
+            $browserCount++
+
+            if ($ShowProgress) {
+                $sizeText = Format-FileSize -Bytes $scan.TotalBytes
+                if ($browserCount -eq 1) { Write-Host '' }
+                Write-Host "    $displayName`: $($scan.FileCount) files, $sizeText" -ForegroundColor White
+            }
         }
+    }
+
+    if ($ShowProgress -and $browserCount -eq 0) {
+        Write-Host "`r    Browser caches: none found     " -ForegroundColor Gray
+    }
+
+    if ($ShowProgress) {
+        $totalSize = [long]0
+        foreach ($t in $targets) { $totalSize += $t.Size }
+        Write-Host ''
+        Write-Host "  Scan complete: $($targets.Count) targets, $(Format-FileSize -Bytes $totalSize) total" -ForegroundColor Cyan
+        Write-Host ''
     }
 
     return $targets
@@ -227,20 +245,30 @@ function Measure-DirectorySafe {
         Uses .NET EnumerateFileSystemInfos to count files and sum sizes
         without following reparse points. Handles locked files, access
         denied, and path-too-long errors gracefully.
+
+        For large directories (100k+ files), caps enumeration at MaxFiles
+        and returns an estimate. The exact count is not needed for preview
+        -- the actual cleanup processes all files regardless.
     .PARAMETER Path
         The directory to measure.
+    .PARAMETER MaxFiles
+        Stop full enumeration after this many files and estimate the rest.
+        Set to 0 to disable the cap and enumerate all files. Default: 50000.
     .OUTPUTS
-        [PSCustomObject] With FileCount and TotalBytes properties.
+        [PSCustomObject] With FileCount, TotalBytes, and Estimated properties.
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [string]$Path
+        [string]$Path,
+
+        [int]$MaxFiles = 50000
     )
 
     $result = [PSCustomObject]@{
         FileCount  = 0
         TotalBytes = [long]0
+        Estimated  = $false
     }
 
     $dirInfo = [System.IO.DirectoryInfo]::new($Path)
@@ -251,6 +279,10 @@ function Measure-DirectorySafe {
         return $result
     }
 
+    # Pre-calculate attribute flags for inline checks (avoids per-file function calls)
+    $reparseFlag = [System.IO.FileAttributes]::ReparsePoint
+    $cloudRecallFlags = 0x00400000 -bor 0x00040000
+
     try {
         $queue = [System.Collections.Generic.Queue[System.IO.DirectoryInfo]]::new()
         $queue.Enqueue($dirInfo)
@@ -260,20 +292,26 @@ function Measure-DirectorySafe {
 
             try {
                 foreach ($entry in $current.EnumerateFileSystemInfos()) {
-                    # Skip reparse points
-                    if ($entry.Attributes.HasFlag([System.IO.FileAttributes]::ReparsePoint)) {
-                        continue
-                    }
+                    $attrs = $entry.Attributes
+
+                    # Skip reparse points (junctions, symlinks)
+                    if ($attrs.HasFlag($reparseFlag)) { continue }
 
                     if ($entry -is [System.IO.DirectoryInfo]) {
                         $queue.Enqueue($entry)
                     }
                     else {
-                        # Skip cloud placeholders
-                        if (Test-IsCloudPlaceholder -Item $entry) { continue }
+                        # Skip cloud placeholders (inlined -- avoids function call per file)
+                        if (([int]$attrs -band $cloudRecallFlags) -ne 0) { continue }
 
                         $result.FileCount++
                         try { $result.TotalBytes += $entry.Length } catch { $null = $_ }
+
+                        # Cap enumeration for large directories -- estimate is sufficient for preview
+                        if ($MaxFiles -gt 0 -and $result.FileCount -ge $MaxFiles) {
+                            $result.Estimated = $true
+                            return $result
+                        }
                     }
                 }
             }

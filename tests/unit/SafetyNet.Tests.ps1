@@ -99,10 +99,18 @@ Describe 'Get-SafetyStatus' {
 
     It 'should return zero counts when nothing exists' {
         Mock -CommandName Get-ComputerRestorePoint -MockWith { @() }
-        $result = Get-SafetyStatus
-        $result.RestorePoints | Should -Be 0
-        $result.Backups | Should -Be 0
-        $result.UndoLogEntries | Should -Be 0
+        # Redirect LOCALAPPDATA to TestDrive so we don't pick up real undo logs/backups
+        $origLocal = $env:LOCALAPPDATA
+        $env:LOCALAPPDATA = $TestDrive
+        try {
+            $result = Get-SafetyStatus
+            $result.RestorePoints | Should -Be 0
+            $result.Backups | Should -Be 0
+            $result.UndoLogEntries | Should -Be 0
+        }
+        finally {
+            $env:LOCALAPPDATA = $origLocal
+        }
     }
 
     It 'should count backup files in the backup directory' {

@@ -97,6 +97,42 @@ Describe 'Measure-DirectorySafe' {
         $result.FileCount | Should -Be 0
     }
 
+    It 'should set Estimated to $false for small directories' {
+        $dir = Join-Path $TestDrive 'small_dir'
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        Set-Content -Path (Join-Path $dir 'a.txt') -Value 'a'
+        Set-Content -Path (Join-Path $dir 'b.txt') -Value 'b'
+
+        $result = Measure-DirectorySafe -Path $dir
+        $result.Estimated | Should -BeFalse
+        $result.FileCount | Should -Be 2
+    }
+
+    It 'should cap enumeration at MaxFiles and set Estimated to $true' {
+        $dir = Join-Path $TestDrive 'cap_test'
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        for ($i = 0; $i -lt 10; $i++) {
+            Set-Content -Path (Join-Path $dir "file$i.txt") -Value "data$i" -NoNewline
+        }
+
+        $result = Measure-DirectorySafe -Path $dir -MaxFiles 5
+        $result.FileCount | Should -Be 5
+        $result.Estimated | Should -BeTrue
+        $result.TotalBytes | Should -BeGreaterThan 0
+    }
+
+    It 'should enumerate all files when MaxFiles is 0 (uncapped)' {
+        $dir = Join-Path $TestDrive 'uncapped_test'
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        for ($i = 0; $i -lt 10; $i++) {
+            Set-Content -Path (Join-Path $dir "file$i.txt") -Value "data$i" -NoNewline
+        }
+
+        $result = Measure-DirectorySafe -Path $dir -MaxFiles 0
+        $result.FileCount | Should -Be 10
+        $result.Estimated | Should -BeFalse
+    }
+
     It 'should not follow junctions during measurement' {
         $targetDir = Join-Path $TestDrive 'measure_target'
         $scanDir = Join-Path $TestDrive 'measure_scan'
@@ -188,6 +224,14 @@ Describe 'Get-CleanupTargets' {
         foreach ($target in $result) {
             $target.Size | Should -BeGreaterOrEqual 0
             $target.FileCount | Should -BeGreaterOrEqual 0
+        }
+    }
+
+    It 'should include Estimated property on all targets' {
+        $result = Get-CleanupTargets
+        foreach ($target in $result) {
+            $target.PSObject.Properties.Name | Should -Contain 'Estimated'
+            $target.Estimated | Should -BeOfType [bool]
         }
     }
 }

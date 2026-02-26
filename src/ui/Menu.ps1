@@ -12,12 +12,12 @@ function Show-Banner {
     param()
 
     Write-Host ""
-    Write-Host "  ====================================================" -ForegroundColor Cyan
+    Write-Host "  ====================================================" -ForegroundColor DarkCyan
     Write-Host "              PC Cleanup v2.0                          " -ForegroundColor White
     Write-Host "     Windows Optimization Toolkit                      " -ForegroundColor DarkGray
-    Write-Host "  ====================================================" -ForegroundColor Cyan
+    Write-Host "  ====================================================" -ForegroundColor DarkCyan
     Write-Host ""
-    Write-Host "  Open source | Every change is reversible | AI-verifiable" -ForegroundColor DarkGray
+    Write-Host "  Open source | Every change is reversible" -ForegroundColor DarkGray
     Write-Host ""
 
     if (-not (Test-IsAdmin)) {
@@ -246,10 +246,12 @@ function Show-SelectionMenu {
         return @()
     }
 
-    if ($choice -match '^\d+$') {
-        $toggleIndex = [int]$choice
-        if ($toggleIndex -ge 1 -and $toggleIndex -le $Items.Count) {
-            $Items[$toggleIndex - 1].Selected = -not $Items[$toggleIndex - 1].Selected
+    if ($choice -match '^\d+(,\s*\d+)*$') {
+        $numbers = $choice -split ',' | ForEach-Object { [int]$_.Trim() }
+        foreach ($toggleIndex in $numbers) {
+            if ($toggleIndex -ge 1 -and $toggleIndex -le $Items.Count) {
+                $Items[$toggleIndex - 1].Selected = -not $Items[$toggleIndex - 1].Selected
+            }
         }
         return @($Items | Where-Object { $_.Selected })
     }
@@ -300,15 +302,20 @@ function Invoke-MenuLoop {
 
         switch ($selection) {
             'QuickClean' {
-                $targets = Get-CleanupTargets
+                $targets = Get-CleanupTargets -ShowProgress
                 if ($targets.Count -gt 0) {
                     # Build selection items
                     $selItems = @()
                     foreach ($target in $targets) {
+                        $countText = if ($target.Estimated) { "$($target.FileCount)+" } else { "$($target.FileCount)" }
+                        $sizeText = if ($target.Estimated) { "~$(Format-FileSize $target.Size)" } else { "$(Format-FileSize $target.Size)" }
+                        $desc = "$countText files, $sizeText"
+                        if ($target.Estimated) { $desc += ' (estimated)' }
+                        if ($target.Hint) { $desc = "$($target.Hint) -- $desc" }
                         $selItems += [PSCustomObject]@{
                             Name        = $target.Name
-                            Description = "$($target.FileCount) files, $(Format-FileSize $target.Size)"
-                            Selected    = $true
+                            Description = $desc
+                            Selected    = $false
                             Target      = $target
                         }
                     }
@@ -498,25 +505,27 @@ function Show-StartupMenu {
         return
     }
 
-    # Disable by number
-    if ($choice -match '^\d+$') {
-        $disableIndex = [int]$choice
-        $disableItem = $displayList | Where-Object { $_.Index -eq $disableIndex }
-        if ($disableItem) {
-            if ($disableItem.Program.Risk -eq 'critical') {
-                Write-Warn "WARNING: $($disableItem.Name) is marked as critical."
-                if ($disableItem.Program.RiskReason) {
-                    Write-Warn "Reason: $($disableItem.Program.RiskReason)"
+    # Disable by number (supports comma-separated: 1,2,3)
+    if ($choice -match '^\d+(,\s*\d+)*$') {
+        $numbers = $choice -split ',' | ForEach-Object { [int]$_.Trim() }
+        foreach ($disableIndex in $numbers) {
+            $disableItem = $displayList | Where-Object { $_.Index -eq $disableIndex }
+            if ($disableItem) {
+                if ($disableItem.Program.Risk -eq 'critical') {
+                    Write-Warn "WARNING: $($disableItem.Name) is marked as critical."
+                    if ($disableItem.Program.RiskReason) {
+                        Write-Warn "Reason: $($disableItem.Program.RiskReason)"
+                    }
+                    if (-not (Get-UserConfirmation -Prompt "Disable critical program '$($disableItem.Name)' anyway?" -Default 'N')) {
+                        Write-Skip "Skipped $($disableItem.Name)."
+                        continue
+                    }
                 }
-                if (-not (Get-UserConfirmation -Prompt 'Disable this critical program anyway?' -Default 'N')) {
-                    Write-Skip 'Disable cancelled.'
-                    return
-                }
+                Disable-StartupProgram -Name $disableItem.Name
             }
-            Disable-StartupProgram -Name $disableItem.Name
-        }
-        else {
-            Write-Warn "Invalid number: $disableIndex"
+            else {
+                Write-Warn "Invalid number: $disableIndex"
+            }
         }
         return
     }
