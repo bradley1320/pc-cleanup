@@ -354,7 +354,7 @@ function Invoke-MenuLoop {
                 Show-ReportMenu
             }
             'TuneUp' {
-                Invoke-FullTuneUp -WhatIf:$WhatIf
+                $null = Invoke-FullTuneUp -WhatIf:$WhatIf
             }
             'BackupRestore' {
                 Show-BackupRestoreMenu

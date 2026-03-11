@@ -286,7 +286,7 @@ if ($Module) {
         'Disk'        { Show-DiskAnalysisMenu }
         'Security'    { Get-SecurityReport | Out-Null }
         'Report'      { Show-ReportMenu }
-        'TuneUp'      { Invoke-FullTuneUp -WhatIf:$WhatIf }
+        'TuneUp'      { $null = Invoke-FullTuneUp -WhatIf:$WhatIf }
     }
     return
 }
