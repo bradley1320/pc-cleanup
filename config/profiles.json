@@ -1,0 +1,39 @@
+{
+  "_version": "2.0.0",
+  "_description": "Preset profiles for one-command optimization via -Profile flag.",
+
+  "Safe": {
+    "description": "Conservative optimization. Only applies safe-tier tweaks with zero breakage potential.",
+    "risk": "safe",
+    "modules": ["QuickClean", "Performance", "Privacy"],
+    "includeCategories": ["Privacy", "Performance", "Cleanup"],
+    "excludeModules": ["Network"]
+  },
+
+  "Gaming": {
+    "description": "Optimized for gaming. Applies safe performance tweaks plus game-specific settings.",
+    "risk": "safe",
+    "modules": ["QuickClean", "Performance"],
+    "includeCategories": ["Performance"],
+    "excludeModules": ["Network"],
+    "notes": "Enables Game Mode, disables Game Bar overlays, sets High Performance power plan."
+  },
+
+  "Privacy": {
+    "description": "Maximum privacy. Applies all safe and moderate privacy tweaks.",
+    "risk": "moderate",
+    "modules": ["Privacy"],
+    "includeCategories": ["Privacy"],
+    "excludeModules": ["Network"],
+    "notes": "Includes DiagTrack disable. May affect Xbox achievements and Game Pass."
+  },
+
+  "Custom": {
+    "description": "User-defined profile. Launches interactive menu for manual tweak selection.",
+    "risk": "advanced",
+    "modules": [],
+    "includeCategories": [],
+    "excludeModules": [],
+    "notes": "All modules and risk tiers available for manual selection."
+  }
+}

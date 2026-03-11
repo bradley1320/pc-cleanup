@@ -1,0 +1,901 @@
+{
+  "_version": "2.0.0",
+  "_description": "PC Cleanup v2 tweak catalog. Each entry defines a data-driven tweak processed by the TweakEngine.",
+
+  "SetTelemetryRequired": {
+    "name": "Set Telemetry to Required Only",
+    "description": "Reduces Windows diagnostic data collection to the minimum required level.",
+    "detail": "Windows sends diagnostic data at three levels: Required (basic device info, error reports), Optional (browsing/app usage), and Full (inking/typing samples). This sets the policy to Required (1), which is the minimum Microsoft allows without Enterprise SKU. MaxTelemetryAllowed caps the ceiling so no app or feature can re-escalate. This does NOT disable telemetry entirely -- it reduces it to the minimum safe level.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/privacy/configure-windows-diagnostic-data-in-your-organization",
+    "category": "Privacy",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [
+      {
+        "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection",
+        "name": "AllowTelemetry",
+        "value": 1,
+        "type": "DWord",
+        "defaultValue": 3
+      },
+      {
+        "path": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\DataCollection",
+        "name": "MaxTelemetryAllowed",
+        "value": 1,
+        "type": "DWord",
+        "defaultValue": 3
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableAdvertisingID": {
+    "name": "Disable Advertising ID",
+    "description": "Prevents apps from using your advertising ID for targeted ads.",
+    "detail": "Windows assigns a unique advertising ID to each user for cross-app ad targeting. Disabling it stops personalized ads in Microsoft apps and UWP apps. This has no effect on browser ads. Microsoft documents this as a user-facing privacy setting in Settings > Privacy > General.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/privacy/manage-connections-from-windows-operating-system-components-to-microsoft-services#31-general",
+    "category": "Privacy",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": false,
+    "registry": [
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo",
+        "name": "Enabled",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableActivityHistory": {
+    "name": "Disable Activity History",
+    "description": "Prevents Windows from collecting and sending your activity history to Microsoft.",
+    "detail": "Windows Timeline and Activity History track which apps, files, and websites you use, and can sync this across devices via your Microsoft account. Disabling it stops local collection and cloud sync of activity data. This removes Timeline functionality in Task View but has no impact on other features.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/privacy/manage-connections-from-windows-operating-system-components-to-microsoft-services#16-activity-history",
+    "category": "Privacy",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [
+      {
+        "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+        "name": "EnableActivityFeed",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      },
+      {
+        "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+        "name": "PublishUserActivities",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      },
+      {
+        "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+        "name": "UploadUserActivities",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableCEIPTasks": {
+    "name": "Disable CEIP Scheduled Tasks",
+    "description": "Disables Customer Experience Improvement Program telemetry tasks.",
+    "detail": "Windows runs several scheduled tasks that collect usage data for the Customer Experience Improvement Program. These tasks run in the background and transmit data about hardware, software, and feature usage. Disabling them is safe and reduces background CPU and network usage.",
+    "docsUrl": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-R2-and-2012/jj553400(v=ws.11)",
+    "category": "Privacy",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [],
+    "services": [],
+    "scheduledTasks": [
+      {
+        "path": "\\Microsoft\\Windows\\Customer Experience Improvement Program\\Consolidator",
+        "enabled": false
+      },
+      {
+        "path": "\\Microsoft\\Windows\\Customer Experience Improvement Program\\UsbCeip",
+        "enabled": false
+      },
+      {
+        "path": "\\Microsoft\\Windows\\DiskDiagnostic\\Microsoft-Windows-DiskDiagnosticDataCollector",
+        "enabled": false
+      }
+    ],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableErrorReporting": {
+    "name": "Disable Windows Error Reporting",
+    "description": "Disables automatic error reporting to Microsoft when apps crash.",
+    "detail": "Windows Error Reporting (WER) sends crash dumps and diagnostic data to Microsoft when applications fail. Disabling it stops the WerSvc service and prevents crash data from being transmitted. You will still see error dialogs locally, but no data is sent to Microsoft. This is safe to disable for personal use.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/win32/wer/windows-error-reporting",
+    "category": "Privacy",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [
+      {
+        "path": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting",
+        "name": "Disabled",
+        "value": 1,
+        "type": "DWord",
+        "defaultValue": 0
+      }
+    ],
+    "services": [
+      {
+        "name": "WerSvc",
+        "startupType": "Disabled",
+        "defaultType": "Manual"
+      }
+    ],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableFeedback": {
+    "name": "Disable Feedback Requests",
+    "description": "Stops Windows from asking you for feedback on features and experiences.",
+    "detail": "Windows periodically prompts users with feedback surveys about their experience. Setting NumberOfSIUFInPeriod to 0 disables these prompts entirely. This key does not exist by default -- creating it with value 0 prevents all feedback dialogs. Removing the key restores default behavior (occasional prompts).",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/privacy/manage-connections-from-windows-operating-system-components-to-microsoft-services#15-feedback--diagnostics",
+    "category": "Privacy",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": false,
+    "registry": [
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Siuf\\Rules",
+        "name": "NumberOfSIUFInPeriod",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": "<NonExistent>"
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableTailoredExperiences": {
+    "name": "Disable Tailored Experiences",
+    "description": "Prevents Microsoft from using your diagnostic data to personalize tips and ads.",
+    "detail": "Windows uses your diagnostic data to offer tailored tips, suggestions, and recommendations in the OS. Disabling this stops Microsoft from analyzing your diagnostic data for personalization purposes. You will still see generic tips and suggestions, just not ones targeted to your usage patterns.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/privacy/manage-connections-from-windows-operating-system-components-to-microsoft-services#15-feedback--diagnostics",
+    "category": "Privacy",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": false,
+    "registry": [
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Privacy",
+        "name": "TailoredExperiencesWithDiagnosticDataEnabled",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableOnlineSpeechRecognition": {
+    "name": "Disable Online Speech Recognition",
+    "description": "Prevents Windows from sending voice data to Microsoft for cloud-based speech recognition.",
+    "detail": "Windows can send voice clips to Microsoft's cloud for improved speech recognition accuracy. Disabling this uses only local on-device recognition, which is less accurate but fully private. This does not affect accessibility features like Narrator or Windows Speech Recognition -- it only disables the cloud component.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/privacy/manage-connections-from-windows-operating-system-components-to-microsoft-services#bkmk-priv-speech",
+    "category": "Privacy",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": false,
+    "registry": [
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Speech_OneCore\\Settings\\OnlineSpeechPrivacy",
+        "name": "HasAccepted",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableInkAndTypingData": {
+    "name": "Disable Inking and Typing Data Collection",
+    "description": "Stops Windows from collecting handwriting, typing, and contacts data for personalization.",
+    "detail": "Windows collects inking and typing samples to improve autocorrect, autocomplete, and handwriting recognition. It also harvests contact names for suggestion accuracy. Disabling this stops all collection of typing patterns, ink strokes, and contact data. Autocorrect and suggestions still work but will not improve over time based on your usage.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/privacy/manage-connections-from-windows-operating-system-components-to-microsoft-services#217-inking--typing",
+    "category": "Privacy",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": false,
+    "registry": [
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\TIPC",
+        "name": "Enabled",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      },
+      {
+        "path": "HKCU:\\Software\\Microsoft\\InputPersonalization",
+        "name": "RestrictImplicitInkCollection",
+        "value": 1,
+        "type": "DWord",
+        "defaultValue": 0
+      },
+      {
+        "path": "HKCU:\\Software\\Microsoft\\InputPersonalization",
+        "name": "RestrictImplicitTextCollection",
+        "value": 1,
+        "type": "DWord",
+        "defaultValue": 0
+      },
+      {
+        "path": "HKCU:\\Software\\Microsoft\\InputPersonalization\\TrainedDataStore",
+        "name": "HarvestContacts",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      },
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Personalization\\Settings",
+        "name": "AcceptedPrivacyPolicy",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableAppLaunchTracking": {
+    "name": "Disable App Launch Tracking",
+    "description": "Stops Windows from tracking which apps you launch for Start menu personalization.",
+    "detail": "Windows tracks app launches to personalize the Start menu's 'Most used' list and improve search results. Disabling this stops the tracking -- your Start menu will no longer show a 'Most used' section, but all other Start menu functionality remains. This is a common privacy preference with minimal functional impact.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/privacy/manage-connections-from-windows-operating-system-components-to-microsoft-services#bkmk-general",
+    "category": "Privacy",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": false,
+    "registry": [
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+        "name": "Start_TrackProgs",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableDiagTrack": {
+    "name": "Disable Telemetry Service",
+    "description": "Stops the Connected User Experiences and Telemetry service (DiagTrack).",
+    "detail": "The DiagTrack service collects and transmits diagnostic and usage data to Microsoft. Disabling it significantly reduces telemetry but may affect Xbox Live achievements, Game Pass connectivity, and Teredo tunneling. Safe to disable if you don't use Microsoft gaming services.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/privacy/configure-windows-diagnostic-data-in-your-organization",
+    "category": "Privacy",
+    "risk": "moderate",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [],
+    "services": [
+      {
+        "name": "DiagTrack",
+        "startupType": "Disabled",
+        "defaultType": "Automatic"
+      }
+    ],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableCortana": {
+    "name": "Disable Cortana",
+    "description": "Disables Cortana voice assistant and its background data collection.",
+    "detail": "Cortana collects voice queries, search history, and device usage data. Disabling it via Group Policy stops the assistant from activating, indexing your data, and transmitting queries to Microsoft. On newer Windows 11 builds, Cortana is already deprecated, but the policy key ensures it stays disabled. Search functionality in the Start menu is unaffected.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/configuration/cortana-at-work/cortana-at-work-policy-settings",
+    "category": "Privacy",
+    "risk": "moderate",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [
+      {
+        "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search",
+        "name": "AllowCortana",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableBackgroundApps": {
+    "name": "Disable Background Apps",
+    "description": "Prevents UWP/Store apps from running in the background and consuming resources.",
+    "detail": "Windows allows Store apps to run background tasks for notifications, updates, and live tiles. Disabling this globally stops all UWP apps from running in the background, which reduces CPU, memory, and network usage. UWP apps will not receive push notifications, update live tiles, or download content while in the background. You will still receive notifications from apps you actively have open. Individual app background permissions can be re-enabled in Settings if needed.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/privacy/manage-connections-from-windows-operating-system-components-to-microsoft-services#bkmk-priv-background",
+    "category": "Privacy",
+    "risk": "moderate",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": false,
+    "registry": [
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications",
+        "name": "GlobalUserDisabled",
+        "value": 1,
+        "type": "DWord",
+        "defaultValue": 0
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableLocationTracking": {
+    "name": "Disable Location Tracking",
+    "description": "Disables the Windows location service and prevents apps from accessing your location.",
+    "detail": "Windows provides a location service that apps can use to determine your geographic position via GPS, Wi-Fi, and IP geolocation. Disabling it stops the Geolocation Service (lfsvc) and sets the system-wide location policy to disabled. Weather, Maps, and location-based apps will not function until re-enabled. Find My Device will also be affected.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/privacy/manage-connections-from-windows-operating-system-components-to-microsoft-services#bkmk-priv-location",
+    "category": "Privacy",
+    "risk": "moderate",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [
+      {
+        "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\LocationAndSensors",
+        "name": "DisableLocation",
+        "value": 1,
+        "type": "DWord",
+        "defaultValue": 0
+      }
+    ],
+    "services": [
+      {
+        "name": "lfsvc",
+        "startupType": "Disabled",
+        "defaultType": "Manual"
+      }
+    ],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableWebSearch": {
+    "name": "Disable Web Search in Start Menu",
+    "description": "Prevents Windows Search from sending queries to Bing when you search the Start menu.",
+    "detail": "By default, typing in the Start menu or search bar sends your query to Bing via the cloud. Disabling web search keeps all searches local -- only files, apps, and settings are searched. This improves search speed, reduces bandwidth, and prevents your search queries from being sent to Microsoft. Bing suggestions and web results will no longer appear in Start.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/privacy/manage-connections-from-windows-operating-system-components-to-microsoft-services#2-cortana-and-search",
+    "category": "Privacy",
+    "risk": "moderate",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": false,
+    "registry": [
+      {
+        "path": "HKCU:\\Software\\Policies\\Microsoft\\Windows\\Explorer",
+        "name": "DisableSearchBoxSuggestions",
+        "value": 1,
+        "type": "DWord",
+        "defaultValue": 0
+      },
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Search",
+        "name": "BingSearchEnabled",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableCopilot": {
+    "name": "Disable Windows Copilot",
+    "description": "Disables the Windows Copilot AI assistant via Group Policy.",
+    "detail": "Windows Copilot is an AI assistant integrated into Windows 11. This tweak disables it via Group Policy registry keys and hides the taskbar button. Note that some Copilot background processes may still run -- this disables the user-facing interface and policy-level integration. Disables via registry policy -- does NOT remove packages. Package removal on 24H2 breaks File Explorer. The Copilot feature was introduced in Windows 11 23H2 (build 22631).",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-windowsai",
+    "category": "Privacy",
+    "risk": "moderate",
+    "minBuild": 22631,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [
+      {
+        "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsCopilot",
+        "name": "TurnOffWindowsCopilot",
+        "value": 1,
+        "type": "DWord",
+        "defaultValue": 0
+      },
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+        "name": "ShowCopilotButton",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableRecallAI": {
+    "name": "Disable Windows Recall",
+    "description": "Disables the Windows Recall AI screenshot feature via Group Policy.",
+    "detail": "Windows Recall takes periodic screenshots of your activity and uses AI to make them searchable. This tweak disables AI data analysis and prevents Recall from being enabled. Disables via registry policy -- does NOT remove packages. Package removal on 24H2 breaks File Explorer. Recall requires Copilot+ PC hardware (NPU) and was introduced in Windows 11 24H2 (build 26100).",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-windowsai",
+    "category": "Privacy",
+    "risk": "moderate",
+    "minBuild": 26100,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [
+      {
+        "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsAI",
+        "name": "DisableAIDataAnalysis",
+        "value": 1,
+        "type": "DWord",
+        "defaultValue": 0
+      },
+      {
+        "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsAI",
+        "name": "AllowRecallEnablement",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "BlockTelemetryFirewall": {
+    "name": "Block Telemetry via Firewall Rules",
+    "description": "Creates Windows Firewall outbound rules to block known Microsoft telemetry endpoints.",
+    "detail": "Adds outbound firewall rules that block the DiagTrack service executable and known telemetry host processes from connecting to the internet. This provides network-level blocking in addition to registry-based disabling. The rules target DiagTrack (via service filter on svchost.exe), CompatTelRunner.exe, and DeviceCensus.exe. If these executables do not exist on your Windows version, the corresponding rules are created but have no effect. Rules are named with a PCCleanup prefix for easy identification and removal. This is a defense-in-depth measure -- even if a service is re-enabled by Windows Update, the firewall rules prevent data transmission.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/privacy/manage-windows-11-endpoints",
+    "category": "Privacy",
+    "risk": "advanced",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [
+      "$rules = @('PCCleanup-Block-DiagTrack','PCCleanup-Block-CompatTelRunner','PCCleanup-Block-DeviceCensus'); foreach ($r in $rules) { $existing = Get-NetFirewallRule -DisplayName $r -ErrorAction SilentlyContinue; if ($existing) { Remove-NetFirewallRule -DisplayName $r -ErrorAction SilentlyContinue } }; New-NetFirewallRule -DisplayName 'PCCleanup-Block-DiagTrack' -Direction Outbound -Program '%SystemRoot%\\System32\\svchost.exe' -Service DiagTrack -Action Block -Description 'PC Cleanup: Block DiagTrack telemetry service outbound' | Out-Null; New-NetFirewallRule -DisplayName 'PCCleanup-Block-CompatTelRunner' -Direction Outbound -Program '%SystemRoot%\\System32\\CompatTelRunner.exe' -Action Block -Description 'PC Cleanup: Block Compatibility Telemetry runner outbound' | Out-Null; New-NetFirewallRule -DisplayName 'PCCleanup-Block-DeviceCensus' -Direction Outbound -Program '%SystemRoot%\\System32\\DeviceCensus.exe' -Action Block -Description 'PC Cleanup: Block Device Census telemetry outbound' | Out-Null"
+    ],
+    "undoScript": [
+      "Remove-NetFirewallRule -DisplayName 'PCCleanup-Block-DiagTrack' -ErrorAction SilentlyContinue; Remove-NetFirewallRule -DisplayName 'PCCleanup-Block-CompatTelRunner' -ErrorAction SilentlyContinue; Remove-NetFirewallRule -DisplayName 'PCCleanup-Block-DeviceCensus' -ErrorAction SilentlyContinue"
+    ]
+  },
+
+  "DisableDeliveryOptimization": {
+    "name": "Disable Delivery Optimization",
+    "description": "Stops Windows from using peer-to-peer sharing for updates and app downloads.",
+    "detail": "Delivery Optimization (DO) uses peer-to-peer technology to share Windows Update and Store app downloads between devices on your network and optionally across the internet. Setting DODownloadMode to 0 disables all P2P sharing -- updates will only download directly from Microsoft servers. This may slow down large updates but prevents your PC from uploading data to other devices. The DO service is also disabled to prevent background resource usage.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/deployment/do/waas-delivery-optimization",
+    "category": "Privacy",
+    "risk": "advanced",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [
+      {
+        "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization",
+        "name": "DODownloadMode",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [
+      {
+        "name": "DoSvc",
+        "startupType": "Disabled",
+        "defaultType": "Automatic"
+      }
+    ],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "BlockTelemetryIFEO": {
+    "name": "Block Telemetry Executables via IFEO",
+    "description": "Uses Image File Execution Options to prevent telemetry executables from running.",
+    "detail": "Image File Execution Options (IFEO) redirects an executable to a different program at launch. Setting the Debugger key causes Windows to launch the debugger INSTEAD of the target process -- the original executable never runs. CompatTelRunner.exe and DeviceCensus.exe are telemetry data collectors that run periodically. With this tweak, Windows launches taskkill.exe in their place, which exits immediately and harmlessly. WARNING: IFEO Debugger entries are a known malware persistence technique (MITRE ATT&CK T1546.012). Antivirus and EDR tools WILL likely flag these entries as suspicious or malicious. You may need to add exclusions in your security software. Only use this if you understand the implications and accept the AV alert risk.",
+    "docsUrl": "https://learn.microsoft.com/en-us/previous-versions/windows/desktop/xperf/image-file-execution-options",
+    "category": "Privacy",
+    "risk": "advanced",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [
+      {
+        "path": "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\CompatTelRunner.exe",
+        "name": "Debugger",
+        "value": "%SystemRoot%\\System32\\taskkill.exe",
+        "type": "String",
+        "defaultValue": "<NonExistent>"
+      },
+      {
+        "path": "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\DeviceCensus.exe",
+        "name": "Debugger",
+        "value": "%SystemRoot%\\System32\\taskkill.exe",
+        "type": "String",
+        "defaultValue": "<NonExistent>"
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "SetHighPerformancePowerPlan": {
+    "name": "Set High Performance Power Plan",
+    "description": "Switches the active power plan to High Performance for maximum CPU and device responsiveness.",
+    "detail": "Windows ships with Balanced (default), Power Saver, and High Performance power plans. High Performance prevents the CPU from downclocking, keeps PCI Express at full link state, and disables USB selective suspend. This improves responsiveness and reduces micro-stutters at the cost of higher power consumption. On laptops, battery life will be significantly reduced. The tweak first tries to activate the built-in High Performance plan (GUID 8c5e7fda...). If Ultimate Performance is available (workstation SKUs, Win10 1803+), it will use that instead via invokeScript fallback.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/win32/power/power-policy-settings",
+    "category": "Performance",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [
+      "$ultimateGuid = 'e9a42b02-d5df-448d-aa00-03f14749eb61'; $highPerfGuid = '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c'; $existing = powercfg /list 2>&1; if ($existing -match $ultimateGuid) { powercfg /setactive $ultimateGuid; Write-Info 'Activated Ultimate Performance power plan.' } elseif ($existing -match $highPerfGuid) { powercfg /setactive $highPerfGuid; Write-Info 'Activated High Performance power plan.' } else { Write-Warn 'Neither High Performance nor Ultimate Performance plan found.' }"
+    ],
+    "undoScript": [
+      "$balancedGuid = '381b4222-f694-41f0-9685-ff5bb260df2e'; powercfg /setactive $balancedGuid; Write-Info 'Restored Balanced power plan.'"
+    ]
+  },
+
+  "OptimizeVisualEffects": {
+    "name": "Optimize Visual Effects for Performance",
+    "description": "Disables Windows animations, transparency, and visual flourishes for snappier UI response.",
+    "detail": "Windows enables many visual effects by default: window animations, fade effects, smooth scrolling, transparency, shadow effects, and animated controls. These consume GPU and CPU cycles on every frame. Setting VisualFXSetting to 2 (custom) and disabling individual effects produces a noticeably snappier desktop. Transparency is disabled separately via the Personalize registry key. Menu show delay is reduced from the 400ms default to 0ms for instant menu response. The Windows shell caches visual settings in memory -- an Explorer refresh (WM_SETTINGCHANGE broadcast or Explorer restart) is needed after applying for changes to become visible.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/win32/controls/cookbook-overview",
+    "category": "Performance",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": false,
+    "registry": [
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects",
+        "name": "VisualFXSetting",
+        "value": 2,
+        "type": "DWord",
+        "defaultValue": 0
+      },
+      {
+        "path": "HKCU:\\Control Panel\\Desktop",
+        "name": "UserPreferencesMask",
+        "value": [144, 18, 3, 128, 16, 0, 0, 0],
+        "type": "Binary",
+        "defaultValue": [158, 62, 7, 128, 18, 0, 0, 0]
+      },
+      {
+        "path": "HKCU:\\Control Panel\\Desktop",
+        "name": "MenuShowDelay",
+        "value": "0",
+        "type": "String",
+        "defaultValue": "400"
+      },
+      {
+        "path": "HKCU:\\Control Panel\\Desktop\\WindowMetrics",
+        "name": "MinAnimate",
+        "value": "0",
+        "type": "String",
+        "defaultValue": "1"
+      },
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+        "name": "TaskbarAnimations",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableTransparency": {
+    "name": "Disable Transparency Effects",
+    "description": "Turns off the acrylic/blur transparency effects in taskbar, Start menu, and Action Center.",
+    "detail": "Windows 10/11 uses acrylic (blur) transparency on the taskbar, Start menu, notification center, and some app backgrounds. This requires GPU compositing on every frame and can cause micro-stutters on older hardware. Disabling it renders these surfaces as solid colors instead. The change takes effect after an Explorer shell refresh (WM_SETTINGCHANGE broadcast or Explorer restart).",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/uwp/design/style/acrylic",
+    "category": "Performance",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": false,
+    "registry": [
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+        "name": "EnableTransparency",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "EnableGameMode": {
+    "name": "Enable Game Mode",
+    "description": "Enables Windows Game Mode for prioritized GPU and CPU resources during gaming.",
+    "detail": "Game Mode tells Windows to prioritize the foreground game for CPU and GPU scheduling, and to suppress background tasks like Windows Update installs and driver updates during gameplay. It is enabled by default on Windows 10 1703+ but can be toggled off by users or policies. This tweak ensures it is enabled. Game Mode has minimal impact on non-gaming workloads.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/win32/direct3darticles/feature-game-mode",
+    "category": "Performance",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": false,
+    "registry": [
+      {
+        "path": "HKCU:\\Software\\Microsoft\\GameBar",
+        "name": "AllowAutoGameMode",
+        "value": 1,
+        "type": "DWord",
+        "defaultValue": 1
+      },
+      {
+        "path": "HKCU:\\Software\\Microsoft\\GameBar",
+        "name": "AutoGameModeEnabled",
+        "value": 1,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableGameBar": {
+    "name": "Disable Game Bar and Game DVR",
+    "description": "Disables the Xbox Game Bar overlay and background Game DVR recording.",
+    "detail": "The Xbox Game Bar runs an overlay process that intercepts Win+G and provides FPS counters, screenshots, and video recording. Game DVR continuously records gameplay in the background even when you are not actively recording. Both consume GPU, CPU, and disk resources. Disabling them frees these resources for actual gaming performance. Note: this does NOT uninstall Game Bar -- it disables the overlay and background recording via policy.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/configuration/kiosk-policies#--gameconfigpolicy",
+    "category": "Performance",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [
+      {
+        "path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\GameDVR",
+        "name": "AllowGameDVR",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      },
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR",
+        "name": "AppCaptureEnabled",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      },
+      {
+        "path": "HKCU:\\System\\GameConfigStore",
+        "name": "GameDVR_Enabled",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableMouseAcceleration": {
+    "name": "Disable Mouse Acceleration (Enhance Pointer Precision)",
+    "description": "Disables Windows mouse acceleration for consistent 1:1 mouse tracking.",
+    "detail": "Windows 'Enhance Pointer Precision' applies acceleration curves to mouse movement -- fast movements cover more screen distance per inch than slow movements. This is disorienting for gaming and precision work. Disabling it provides raw, linear 1:1 mouse tracking. The MouseSpeed=0 and MouseThreshold values disable the acceleration curve. SmoothMouseXCurve and SmoothMouseYCurve can also be set to linear but the simple disable via MouseSpeed is sufficient for most users.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-mouseinput",
+    "category": "Performance",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": false,
+    "registry": [
+      {
+        "path": "HKCU:\\Control Panel\\Mouse",
+        "name": "MouseSpeed",
+        "value": "0",
+        "type": "String",
+        "defaultValue": "1"
+      },
+      {
+        "path": "HKCU:\\Control Panel\\Mouse",
+        "name": "MouseThreshold1",
+        "value": "0",
+        "type": "String",
+        "defaultValue": "6"
+      },
+      {
+        "path": "HKCU:\\Control Panel\\Mouse",
+        "name": "MouseThreshold2",
+        "value": "0",
+        "type": "String",
+        "defaultValue": "10"
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableStartupDelay": {
+    "name": "Disable Startup Delay",
+    "description": "Removes the artificial 10-second startup delay that Windows adds before launching startup programs.",
+    "detail": "Windows 10/11 introduces a deliberate delay before launching startup programs to reduce perceived boot time in metrics. Setting StartupDelayInMSec to 0 removes this delay so startup programs begin launching immediately after login. This makes the desktop usable faster at the cost of slightly higher resource contention during the first few seconds after login.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/win32/win7appqual/automatic-maintenance",
+    "category": "Performance",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": false,
+    "registry": [
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Serialize",
+        "name": "StartupDelayInMSec",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": "<NonExistent>"
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableSearchIndexing": {
+    "name": "Disable Windows Search Indexing Service",
+    "description": "Stops the Windows Search indexing service to reduce disk I/O and CPU usage.",
+    "detail": "The Windows Search service (WSearch) continuously indexes file contents, email, and metadata across your drives. On SSDs, the I/O penalty is minimal, but the CPU and memory overhead is still present. Disabling it stops all background indexing. File searches in Explorer will fall back to real-time scanning (slower for large directories but uses zero background resources). Outlook desktop search will also be slower. This is classified as moderate because it noticeably changes the search experience.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/win32/search/-search-3x-wds-overview",
+    "category": "Performance",
+    "risk": "moderate",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": true,
+    "registry": [],
+    "services": [
+      {
+        "name": "WSearch",
+        "startupType": "Disabled",
+        "defaultType": "Automatic"
+      }
+    ],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  },
+
+  "DisableWindowsTips": {
+    "name": "Disable Windows Tips and Suggestions",
+    "description": "Stops Windows from showing tips, tricks, and suggestions in the Start menu and Settings.",
+    "detail": "Windows periodically displays tips, suggestions, and feature promotions in the Start menu, lock screen, Settings app, and notification center. These are essentially ads for Microsoft services and features. Disabling them reduces visual clutter and prevents occasional background data fetches. This is purely cosmetic/informational -- no system behavior changes.",
+    "docsUrl": "https://learn.microsoft.com/en-us/windows/configuration/manage-tips-and-suggestions",
+    "category": "Performance",
+    "risk": "safe",
+    "minBuild": null,
+    "maxBuild": null,
+    "requiresAdmin": false,
+    "registry": [
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+        "name": "SystemPaneSuggestionsEnabled",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      },
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+        "name": "SoftLandingEnabled",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      },
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+        "name": "SubscribedContent-338389Enabled",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      },
+      {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+        "name": "SubscribedContent-310093Enabled",
+        "value": 0,
+        "type": "DWord",
+        "defaultValue": 1
+      }
+    ],
+    "services": [],
+    "scheduledTasks": [],
+    "invokeScript": [],
+    "undoScript": []
+  }
+}

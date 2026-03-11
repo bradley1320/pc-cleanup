@@ -1,0 +1,77 @@
+{
+  "_version": "2.0.0",
+  "_description": "Critical startup programs that should NOT be disabled. StartupManager warns if the user selects these.",
+
+  "entries": [
+    {
+      "name": "Realtek Audio",
+      "publisher": "Realtek Semiconductor",
+      "pattern": "RAVCpl64\\.exe|RtkNGUI64\\.exe|RtkAudUService64\\.exe|RtHDVCpl\\.exe|RTHDCPL\\.exe",
+      "description": "Audio driver control panel. Disabling may cause audio to stop working.",
+      "severity": "critical"
+    },
+    {
+      "name": "NVIDIA Display Driver",
+      "publisher": "NVIDIA Corporation",
+      "pattern": "NvDisplay\\.Container\\.exe|nvcontainer\\.exe|NvTmru\\.exe",
+      "description": "GPU driver service. Disabling breaks display output and GPU acceleration.",
+      "severity": "critical"
+    },
+    {
+      "name": "AMD Radeon Software",
+      "publisher": "Advanced Micro Devices",
+      "pattern": "RadeonSoftware\\.exe|AMDRSServ\\.exe|aaborni\\.exe",
+      "description": "AMD GPU driver software. Disabling may cause display issues.",
+      "severity": "critical"
+    },
+    {
+      "name": "Windows Security",
+      "publisher": "Microsoft Corporation",
+      "pattern": "SecurityHealthSystray\\.exe|SecurityHealth",
+      "description": "Windows Defender system tray icon. Disabling hides security notifications.",
+      "severity": "critical"
+    },
+    {
+      "name": "Bluetooth Support",
+      "publisher": "Various",
+      "pattern": "BTServer\\.exe|btmshellex\\.dll|BtvStack\\.exe|BluetoothUserService",
+      "description": "Bluetooth stack. Disabling prevents Bluetooth devices from connecting.",
+      "severity": "critical"
+    },
+    {
+      "name": "Intel Graphics Command Center",
+      "publisher": "Intel Corporation",
+      "pattern": "igfxCUIService\\.exe|igfxEM\\.exe|igfxTray\\.exe",
+      "description": "Intel GPU driver service. Disabling may cause display scaling issues.",
+      "severity": "critical"
+    },
+    {
+      "name": "Synaptics Touchpad",
+      "publisher": "Synaptics",
+      "pattern": "SynTPEnh\\.exe|SynTPHelper\\.exe|SynTPStart\\.exe",
+      "description": "Touchpad driver. Disabling removes touchpad gestures and configuration.",
+      "severity": "critical"
+    },
+    {
+      "name": "Logitech G HUB",
+      "publisher": "Logitech",
+      "pattern": "lghub\\.exe|lghub_agent\\.exe|lghub_updater\\.exe",
+      "description": "Peripheral driver software. Disabling may reset custom key/button mappings.",
+      "severity": "critical"
+    },
+    {
+      "name": "Windows Audio",
+      "publisher": "Microsoft Corporation",
+      "pattern": "AudioSrv|SndVol\\.exe",
+      "description": "Core audio service. Disabling removes all system sound.",
+      "severity": "critical"
+    },
+    {
+      "name": "Antivirus Software",
+      "publisher": "Various",
+      "pattern": "avgnt\\.exe|avguard\\.exe|avp\\.exe|bdagent\\.exe|mbam\\.exe|NortonSecurity|McAfee|Bitdefender",
+      "description": "Third-party antivirus. Disabling leaves the system unprotected.",
+      "severity": "critical"
+    }
+  ]
+}

@@ -1,0 +1,211 @@
+# ==============================================================================
+# PC Cleanup v2 -- Build.ps1
+# Concatenates modular source files into a single distributable pccleanup.ps1.
+# Load order: core (01-05 numerically) -> handlers -> modules -> ui -> main.ps1
+# ==============================================================================
+
+[CmdletBinding()]
+param(
+    [string]$Version = (Get-Date -Format 'yy.MM.dd')
+)
+
+$ErrorActionPreference = 'Stop'
+
+$projectRoot = Split-Path $PSScriptRoot -Parent
+$srcPath     = Join-Path $projectRoot 'src'
+$configPath  = Join-Path $projectRoot 'config'
+$distPath    = Join-Path $projectRoot 'dist'
+
+# Ensure dist/ exists
+if (-not (Test-Path $distPath)) {
+    New-Item -ItemType Directory -Path $distPath -Force | Out-Null
+}
+
+Write-Host "Building PC Cleanup v2 ($Version)..." -ForegroundColor Cyan
+
+# Collect source files in strict load order (main.ps1 handled separately)
+$sourceFiles = [System.Collections.Generic.List[string]]::new()
+
+# 1. Core files (numerical order is critical)
+$coreFiles = Get-ChildItem -Path (Join-Path $srcPath 'core') -Filter '*.ps1' | Sort-Object Name
+foreach ($file in $coreFiles) {
+    $sourceFiles.Add($file.FullName)
+    Write-Host "  [+] core/$($file.Name)" -ForegroundColor DarkGray
+}
+
+# 2. Handlers
+$handlerFiles = Get-ChildItem -Path (Join-Path $srcPath 'handlers') -Filter '*.ps1' | Sort-Object Name
+foreach ($file in $handlerFiles) {
+    $sourceFiles.Add($file.FullName)
+    Write-Host "  [+] handlers/$($file.Name)" -ForegroundColor DarkGray
+}
+
+# 3. Modules
+$moduleFiles = Get-ChildItem -Path (Join-Path $srcPath 'modules') -Filter '*.ps1' | Sort-Object Name
+foreach ($file in $moduleFiles) {
+    $sourceFiles.Add($file.FullName)
+    Write-Host "  [+] modules/$($file.Name)" -ForegroundColor DarkGray
+}
+
+# 4. UI
+$uiFiles = Get-ChildItem -Path (Join-Path $srcPath 'ui') -Filter '*.ps1' | Sort-Object Name
+foreach ($file in $uiFiles) {
+    $sourceFiles.Add($file.FullName)
+    Write-Host "  [+] ui/$($file.Name)" -ForegroundColor DarkGray
+}
+
+# 5. main.ps1 (entry point -- always last, special handling for param block)
+$mainFile = Join-Path $srcPath 'main.ps1'
+Write-Host "  [+] main.ps1" -ForegroundColor DarkGray
+
+# Extract main.ps1's param block and body separately.
+# PowerShell requires param() at the very start of a script file.
+# In the concatenated dist output, main.ps1's param block must appear
+# at the top (before all function definitions), and main.ps1's body
+# (everything after the param block) must appear at the end.
+$mainContent = Get-Content -Path $mainFile -Raw
+$mainLines = $mainContent -split "`r?`n"
+
+# Find the param() block boundaries: starts at [CmdletBinding()] and ends at the closing )
+$paramStartLine = -1
+$paramEndLine = -1
+$parenDepth = 0
+$inParam = $false
+for ($i = 0; $i -lt $mainLines.Count; $i++) {
+    $line = $mainLines[$i]
+    if ($line -match '^\[CmdletBinding' -and $paramStartLine -eq -1) {
+        $paramStartLine = $i
+    }
+    if ($paramStartLine -ge 0 -and $line -match 'param\s*\(') {
+        $inParam = $true
+    }
+    if ($inParam) {
+        foreach ($char in $line.ToCharArray()) {
+            if ($char -eq '(') { $parenDepth++ }
+            if ($char -eq ')') { $parenDepth-- }
+        }
+        if ($parenDepth -le 0) {
+            $paramEndLine = $i
+            break
+        }
+    }
+}
+
+$mainParamBlock = ''
+$mainBody = ''
+if ($paramStartLine -ge 0 -and $paramEndLine -ge 0) {
+    # Collect comment header lines before the param block (skip empty lines at start)
+    $headerLines = @()
+    for ($i = 0; $i -lt $paramStartLine; $i++) {
+        $headerLines += $mainLines[$i]
+    }
+    # Param block itself
+    $paramLines = @()
+    for ($i = $paramStartLine; $i -le $paramEndLine; $i++) {
+        $paramLines += $mainLines[$i]
+    }
+    $mainParamBlock = ($paramLines -join "`r`n")
+    # Body is everything after the param block, excluding DIST_EXCLUDE blocks
+    $bodyLines = @()
+    $excluding = $false
+    for ($i = $paramEndLine + 1; $i -lt $mainLines.Count; $i++) {
+        if ($mainLines[$i] -match '^\s*#\s*DIST_EXCLUDE_START') {
+            $excluding = $true
+            continue
+        }
+        if ($mainLines[$i] -match '^\s*#\s*DIST_EXCLUDE_END') {
+            $excluding = $false
+            continue
+        }
+        if (-not $excluding) {
+            $bodyLines += $mainLines[$i]
+        }
+    }
+    $mainBody = ($bodyLines -join "`r`n")
+} else {
+    # Fallback: no param block found, include entire file as body
+    $mainBody = $mainContent
+}
+
+# Build the dist output
+$content = [System.Text.StringBuilder]::new()
+
+# Emit header comment + param block at the very top (PS requires param() first)
+$content.AppendLine(@"
+# ==============================================================================
+# PC Cleanup v2 -- Compiled Distribution
+# Version: $Version
+# Built: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+# Project: https://github.com/bradley1320/pc-cleanup
+#
+# The Windows optimizer you can read, understand, and undo -- one tweak at a time.
+# Built with Claude Code (Anthropic). Open source and fully auditable.
+#
+# DO NOT EDIT THIS FILE -- it is auto-generated by Build.ps1.
+# Edit the source files in src/ and rebuild.
+# ==============================================================================
+"@) | Out-Null
+
+# Emit main.ps1's param block immediately after the header comment
+if ($mainParamBlock) {
+    $content.AppendLine('') | Out-Null
+    $content.AppendLine($mainParamBlock) | Out-Null
+    $content.AppendLine('') | Out-Null
+}
+
+# Concatenate all source files (functions, handlers, modules, UI)
+foreach ($filePath in $sourceFiles) {
+    $relativePath = $filePath.Replace($srcPath, 'src').Replace('\', '/')
+    $content.AppendLine("# --- $relativePath ---") | Out-Null
+    $content.AppendLine((Get-Content -Path $filePath -Raw)) | Out-Null
+    $content.AppendLine('') | Out-Null
+}
+
+# Append main.ps1's body (everything after param block) at the end
+$content.AppendLine('# --- src/main.ps1 (entry point) ---') | Out-Null
+$content.AppendLine($mainBody) | Out-Null
+
+# Write compiled output
+$outputPath = Join-Path $distPath 'pccleanup.ps1'
+Set-Content -Path $outputPath -Value $content.ToString() -Encoding UTF8
+Write-Host "`n  Output: $outputPath" -ForegroundColor Green
+
+# Copy config files to dist/
+$distConfigPath = Join-Path $distPath 'config'
+if (-not (Test-Path $distConfigPath)) {
+    New-Item -ItemType Directory -Path $distConfigPath -Force | Out-Null
+}
+
+Get-ChildItem -Path $configPath -Filter '*.json' | ForEach-Object {
+    Copy-Item -Path $_.FullName -Destination $distConfigPath -Force
+    Write-Host "  [+] config/$($_.Name)" -ForegroundColor DarkGray
+}
+
+# Copy Run.bat to dist/
+$runBatSource = Join-Path $PSScriptRoot 'Run.bat'
+if (Test-Path $runBatSource) {
+    Copy-Item -Path $runBatSource -Destination $distPath -Force
+    Write-Host "  [+] Run.bat" -ForegroundColor DarkGray
+}
+
+# --- Config Integrity: Compute SHA-256 hashes and embed in compiled script ---
+$configFileNames = @('tweaks.json', 'apps-bloat.json', 'apps-critical.json', 'profiles.json')
+$hashLines = @()
+foreach ($cfgFile in $configFileNames) {
+    $cfgPath = Join-Path $configPath $cfgFile
+    if (Test-Path $cfgPath) {
+        $hash = (Get-FileHash -Path $cfgPath -Algorithm SHA256).Hash
+        $hashLines += "    '$cfgFile' = '$hash'"
+    }
+}
+$hashTableStr = '$script:ExpectedConfigHashes = @{' + "`r`n" + ($hashLines -join "`r`n") + "`r`n}"
+
+$compiledContent = Get-Content -Path $outputPath -Raw
+$compiledContent = $compiledContent.Replace('$script:ExpectedConfigHashes = @{}', $hashTableStr)
+Set-Content -Path $outputPath -Value $compiledContent -Encoding UTF8
+Write-Host "  [+] Config integrity hashes embedded ($($hashLines.Count) files)" -ForegroundColor DarkGray
+
+# Summary
+$lineCount = (Get-Content -Path $outputPath).Count
+$fileSize  = (Get-Item -Path $outputPath).Length
+Write-Host "`n  Build complete: $lineCount lines, $([math]::Round($fileSize / 1KB, 1)) KB" -ForegroundColor Green

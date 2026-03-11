@@ -1,0 +1,5 @@
+dist/
+*.log
+backups/
+*.bak
+.claude/
