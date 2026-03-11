@@ -99,6 +99,125 @@ Describe 'main.ps1 CLI dispatch' {
     }
 }
 
+Describe 'main.ps1 config integrity' {
+    It 'should define Test-ConfigIntegrity function' {
+        $mainScript | Should -BeLike '*function Test-ConfigIntegrity*'
+    }
+
+    It 'should define ExpectedConfigHashes variable' {
+        $mainScript | Should -BeLike '*ExpectedConfigHashes*'
+    }
+
+    It 'should call Test-ConfigIntegrity before CLI dispatch' {
+        $mainScript | Should -BeLike '*Test-ConfigIntegrity*CLI Dispatch*'
+    }
+
+    It 'should check SHA256 hashes of config files' {
+        $mainScript | Should -BeLike '*Get-FileHash*SHA256*'
+    }
+
+    It 'should warn about modified config files' {
+        $mainScript | Should -BeLike '*Configuration files have been modified*'
+    }
+
+    It 'should require user acknowledgment on hash mismatch' {
+        $mainScript | Should -BeLike '*Continue anyway*'
+    }
+}
+
+Describe 'Test-ConfigIntegrity function' {
+    BeforeAll {
+        # Extract Test-ConfigIntegrity from main.ps1 without running side effects
+        $script:ExpectedConfigHashes = @{}
+        $mainLines = Get-Content -Path "$PSScriptRoot/../../src/main.ps1"
+        $inFunc = $false
+        $funcLines = @()
+        $depth = 0
+        foreach ($line in $mainLines) {
+            if ($line -match '^\s*function Test-ConfigIntegrity') {
+                $inFunc = $true
+            }
+            if ($inFunc) {
+                $funcLines += $line
+                foreach ($ch in $line.ToCharArray()) {
+                    if ($ch -eq '{') { $depth++ }
+                    if ($ch -eq '}') { $depth-- }
+                }
+                if ($depth -le 0 -and $funcLines.Count -gt 1) { break }
+            }
+        }
+        Invoke-Expression ($funcLines -join "`n")
+    }
+
+    BeforeEach {
+        # Set ConfigPath so the function can resolve config dir in test context
+        # (where $PSScriptRoot is empty for Invoke-Expression'd functions)
+        $script:ConfigPath = Join-Path "$PSScriptRoot" '../../config'
+    }
+
+    It 'should return true when no hashes are embedded (dev mode)' {
+        $script:ExpectedConfigHashes = @{}
+        Test-ConfigIntegrity | Should -BeTrue
+    }
+
+    It 'should return true when all hashes match' {
+        $hash = (Get-FileHash -Path (Join-Path $script:ConfigPath 'tweaks.json') -Algorithm SHA256).Hash
+        $script:ExpectedConfigHashes = @{ 'tweaks.json' = $hash }
+        Test-ConfigIntegrity | Should -BeTrue
+    }
+
+    It 'should return false when user rejects modified config' {
+        $script:ExpectedConfigHashes = @{ 'tweaks.json' = 'WRONG_HASH_VALUE_HERE' }
+        Mock Read-Host { return 'N' }
+        Mock Write-Host {}
+        Test-ConfigIntegrity | Should -BeFalse
+    }
+
+    It 'should hard-block when tweaks.json is tampered (no user bypass)' {
+        $script:ExpectedConfigHashes = @{ 'tweaks.json' = 'WRONG_HASH_VALUE_HERE' }
+        Mock Write-Host {}
+        Test-ConfigIntegrity | Should -BeFalse
+    }
+
+    It 'should allow user bypass for non-critical config tampering' {
+        $script:ExpectedConfigHashes = @{ 'profiles.json' = 'WRONG_HASH_VALUE_HERE' }
+        Mock Read-Host { return 'Y' }
+        Mock Write-Host {}
+        Test-ConfigIntegrity | Should -BeTrue
+    }
+
+    It 'should detect missing config files' {
+        $script:ConfigPath = Join-Path $TestDrive 'empty_config'
+        New-Item -ItemType Directory -Path $script:ConfigPath -Force | Out-Null
+        $script:ExpectedConfigHashes = @{ 'missing.json' = 'HASH' }
+        Mock Read-Host { return 'N' }
+        Mock Write-Host {}
+        Test-ConfigIntegrity | Should -BeFalse
+    }
+}
+
+Describe 'main.ps1 profile risk clamping' {
+    It 'should contain hardcoded max risk per profile name' {
+        $mainScript | Should -BeLike '*maxRiskPerProfile*'
+    }
+
+    It 'should clamp Safe profile to safe risk' {
+        $mainScript | Should -BeLike "*'Safe' = 'safe'*"
+    }
+
+    It 'should clamp Gaming profile to safe risk' {
+        $mainScript | Should -BeLike "*'Gaming' = 'safe'*"
+    }
+
+    It 'should clamp Privacy profile to moderate risk' {
+        $mainScript | Should -BeLike "*'Privacy' = 'moderate'*"
+    }
+
+    It 'should warn when clamping elevated risk' {
+        $mainScript | Should -BeLike '*elevated risk*Clamping*'
+    }
+}
+
 Describe 'profiles.json' {
     BeforeAll {
         $profilesPath = "$PSScriptRoot/../../config/profiles.json"

@@ -55,6 +55,33 @@ Describe 'Get-BrowserProfiles' {
     }
 }
 
+Describe 'Measure-RecycleBin' {
+    BeforeEach {
+        Mock -CommandName Write-Host -MockWith {}
+        Mock -CommandName Write-Log -MockWith {}
+    }
+
+    It 'should return FileCount, TotalBytes, and Estimated properties' {
+        $result = Measure-RecycleBin
+        $result.PSObject.Properties.Name | Should -Contain 'FileCount'
+        $result.PSObject.Properties.Name | Should -Contain 'TotalBytes'
+        $result.PSObject.Properties.Name | Should -Contain 'Estimated'
+    }
+
+    It 'should return non-negative values' {
+        $result = Measure-RecycleBin
+        $result.FileCount | Should -BeGreaterOrEqual 0
+        $result.TotalBytes | Should -BeGreaterOrEqual 0
+    }
+
+    It 'should not throw on COM failure' {
+        Mock -CommandName New-Object -MockWith { throw 'COM error' } -ParameterFilter { $ComObject -eq 'Shell.Application' }
+        { Measure-RecycleBin } | Should -Not -Throw
+        $result = Measure-RecycleBin
+        $result.FileCount | Should -Be 0
+    }
+}
+
 Describe 'Measure-DirectorySafe' {
     BeforeEach {
         Mock -CommandName Write-Host -MockWith {}
@@ -308,6 +335,31 @@ Describe 'Invoke-Cleanup' {
         Invoke-Cleanup -Targets $targets -WhatIf
         # Files should still exist
         Test-Path (Join-Path $dir 'file.tmp') | Should -BeTrue
+    }
+
+    It 'should use Clear-RecycleBin for recyclebin targets' {
+        Mock -CommandName Clear-RecycleBin -MockWith {}
+
+        $targets = @(
+            [PSCustomObject]@{ Name = 'Recycle Bin'; Path = 'RecycleBin'; FileCount = 5; Size = 1024; Type = 'recyclebin'; RequiresAdmin = $false }
+        )
+
+        $result = Invoke-Cleanup -Targets $targets
+        Should -Invoke -CommandName Clear-RecycleBin -Times 1 -Exactly
+        $result.TotalFiles | Should -Be 5
+        $result.TotalBytes | Should -Be 1024
+    }
+
+    It 'should handle Clear-RecycleBin failure gracefully' {
+        Mock -CommandName Clear-RecycleBin -MockWith { throw 'Access denied' }
+
+        $targets = @(
+            [PSCustomObject]@{ Name = 'Recycle Bin'; Path = 'RecycleBin'; FileCount = 5; Size = 1024; Type = 'recyclebin'; RequiresAdmin = $false }
+        )
+
+        $result = Invoke-Cleanup -Targets $targets
+        $result.Errors | Should -Be 1
+        $result.TotalFiles | Should -Be 0
     }
 
     It 'should report cleanup summary with file counts and bytes' {

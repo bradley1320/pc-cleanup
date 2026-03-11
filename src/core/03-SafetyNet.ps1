@@ -114,6 +114,7 @@ function Backup-RegistryHive {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
+        [ValidatePattern('^HK(LM|CU|CR|U|CC):\\')]
         [string]$Path,
 
         [Parameter(Mandatory)]

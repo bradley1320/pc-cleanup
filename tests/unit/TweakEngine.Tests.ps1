@@ -190,6 +190,54 @@ Describe 'Get-Tweaks' {
         { Get-Tweaks } | Should -Throw '*invalid*'
     }
 
+    It 'should reject non-array invokeScript in schema validation' {
+        $badTweaks = @{
+            'BadScript' = @{
+                name = 'Bad Script Tweak'
+                description = 'Has string invokeScript'
+                detail = 'Detail'
+                docsUrl = 'https://example.com'
+                category = 'Privacy'
+                risk = 'safe'
+                minBuild = $null
+                maxBuild = $null
+                requiresAdmin = $false
+                registry = @(@{ path = 'HKCU:\Test'; name = 'Val'; value = 0; type = 'DWord'; defaultValue = 1 })
+                services = @()
+                scheduledTasks = @()
+                invokeScript = 'not-an-array'
+                undoScript = @()
+            }
+        }
+        $badTweaks | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $TestDrive 'tweaks.json')
+        $script:SchemaValidated = $false
+        { Get-Tweaks } | Should -Throw '*non-array invokeScript*'
+    }
+
+    It 'should reject non-array undoScript in schema validation' {
+        $badTweaks = @{
+            'BadUndo' = @{
+                name = 'Bad Undo Tweak'
+                description = 'Has string undoScript'
+                detail = 'Detail'
+                docsUrl = 'https://example.com'
+                category = 'Privacy'
+                risk = 'safe'
+                minBuild = $null
+                maxBuild = $null
+                requiresAdmin = $false
+                registry = @(@{ path = 'HKCU:\Test'; name = 'Val'; value = 0; type = 'DWord'; defaultValue = 1 })
+                services = @()
+                scheduledTasks = @()
+                invokeScript = @()
+                undoScript = 'not-an-array'
+            }
+        }
+        $badTweaks | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $TestDrive 'tweaks.json')
+        $script:SchemaValidated = $false
+        { Get-Tweaks } | Should -Throw '*non-array undoScript*'
+    }
+
     It 'should include tweaks matching current OS build' {
         # Create a tweak that matches current mock build 22631
         $matchTweaks = @{

@@ -124,20 +124,22 @@ function Show-PrivacyMenu {
         return
     }
 
-    # Toggle by number
-    if ($choice -match '^\d+$') {
-        $toggleIndex = [int]$choice
-        $toggleItem = $displayList | Where-Object { $_.Index -eq $toggleIndex }
-        if ($toggleItem) {
-            if ($toggleItem.Applied) {
-                Invoke-Tweak -Name $toggleItem.Id -Undo
+    # Toggle by number (supports comma/space-separated: 1,2,3 or 1 2 3 or 1, 2, 3)
+    if ($choice -match '^\d+([,\s]+\d+)*$') {
+        $numbers = $choice -split '[,\s]+' | Where-Object { $_ -ne '' } | ForEach-Object { [int]$_ }
+        foreach ($toggleIndex in $numbers) {
+            $toggleItem = $displayList | Where-Object { $_.Index -eq $toggleIndex }
+            if ($toggleItem) {
+                if ($toggleItem.Applied) {
+                    Invoke-Tweak -Name $toggleItem.Id -Undo
+                }
+                else {
+                    Invoke-Tweak -Name $toggleItem.Id
+                }
             }
             else {
-                Invoke-Tweak -Name $toggleItem.Id
+                Write-Warn "Invalid number: $toggleIndex"
             }
-        }
-        else {
-            Write-Warn "Invalid number: $toggleIndex"
         }
         return
     }
@@ -194,7 +196,7 @@ function Show-TweakInfo {
     Write-Host "  Detail: $($tweak.detail)" -ForegroundColor Gray
     Write-Host ""
     Write-Host "  Risk:   $($tweak.risk)" -ForegroundColor $riskColor
-    Write-Host "  Docs:   $($tweak.docsUrl)" -ForegroundColor Cyan
+    Write-Host "  Docs:   $($tweak.docsUrl)" -ForegroundColor DarkCyan
     Write-Host ""
 
     # Current system state for registry entries

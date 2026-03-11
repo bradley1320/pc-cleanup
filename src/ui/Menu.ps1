@@ -246,8 +246,8 @@ function Show-SelectionMenu {
         return @()
     }
 
-    if ($choice -match '^\d+(,\s*\d+)*$') {
-        $numbers = $choice -split ',' | ForEach-Object { [int]$_.Trim() }
+    if ($choice -match '^\d+([,\s]+\d+)*$') {
+        $numbers = $choice -split '[,\s]+' | Where-Object { $_ -ne '' } | ForEach-Object { [int]$_ }
         foreach ($toggleIndex in $numbers) {
             if ($toggleIndex -ge 1 -and $toggleIndex -le $Items.Count) {
                 $Items[$toggleIndex - 1].Selected = -not $Items[$toggleIndex - 1].Selected
@@ -505,9 +505,9 @@ function Show-StartupMenu {
         return
     }
 
-    # Disable by number (supports comma-separated: 1,2,3)
-    if ($choice -match '^\d+(,\s*\d+)*$') {
-        $numbers = $choice -split ',' | ForEach-Object { [int]$_.Trim() }
+    # Disable by number (supports comma/space-separated: 1,2,3 or 1 2 3 or 1, 2, 3)
+    if ($choice -match '^\d+([,\s]+\d+)*$') {
+        $numbers = $choice -split '[,\s]+' | Where-Object { $_ -ne '' } | ForEach-Object { [int]$_ }
         foreach ($disableIndex in $numbers) {
             $disableItem = $displayList | Where-Object { $_.Index -eq $disableIndex }
             if ($disableItem) {

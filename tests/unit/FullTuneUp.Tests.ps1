@@ -25,7 +25,17 @@ Describe 'Invoke-FullTuneUp' {
         $script:SchemaValidated = $false
     }
 
+    It 'should return nothing when user declines confirmation' {
+        Mock Get-UserConfirmation { return $false }
+        Mock New-SafetyRestorePoint { throw 'Should not be called' }
+        Mock Test-IsAdmin { return $false }
+
+        $result = Invoke-FullTuneUp
+        $result | Should -BeNullOrEmpty
+    }
+
     It 'should return a summary object' {
+        Mock Get-UserConfirmation { return $true }
         Mock New-SafetyRestorePoint { return $false }
         Mock Backup-RegistryHive { return $null }
         Mock Save-SystemSnapshot { return [PSCustomObject]@{ BootTimeMs = 1000 } }
@@ -43,6 +53,7 @@ Describe 'Invoke-FullTuneUp' {
     }
 
     It 'should call safety functions first' {
+        Mock Get-UserConfirmation { return $true }
         Mock New-SafetyRestorePoint { return $true }
         Mock Backup-RegistryHive { return 'C:\backup.reg' }
         Mock Save-SystemSnapshot { return [PSCustomObject]@{ BootTimeMs = 1000 } }
@@ -59,6 +70,7 @@ Describe 'Invoke-FullTuneUp' {
     }
 
     It 'should run QuickClean with all targets' {
+        Mock Get-UserConfirmation { return $true }
         Mock New-SafetyRestorePoint { return $false }
         Mock Backup-RegistryHive { return $null }
         Mock Save-SystemSnapshot { return [PSCustomObject]@{ BootTimeMs = 1000 } }
@@ -76,6 +88,7 @@ Describe 'Invoke-FullTuneUp' {
     }
 
     It 'should apply performance and privacy tweaks' {
+        Mock Get-UserConfirmation { return $true }
         Mock New-SafetyRestorePoint { return $false }
         Mock Backup-RegistryHive { return $null }
         Mock Save-SystemSnapshot { return [PSCustomObject]@{ BootTimeMs = 1000 } }
@@ -99,6 +112,7 @@ Describe 'Invoke-FullTuneUp' {
     }
 
     It 'should not run DISM or Prefetch without admin' {
+        Mock Get-UserConfirmation { return $true }
         Mock New-SafetyRestorePoint { return $false }
         Mock Backup-RegistryHive { return $null }
         Mock Save-SystemSnapshot { return [PSCustomObject]@{ BootTimeMs = 1000 } }
@@ -125,6 +139,16 @@ Describe 'Invoke-FullTuneUp' {
         $result = Invoke-FullTuneUp -WhatIf
         $result | Should -Not -BeNullOrEmpty
         $result.RestorePoint | Should -Be $false
+    }
+
+    It 'should use Remove-CleanupItem (not Remove-Item) for prefetch cleanup' {
+        # Security fix F11: Prefetch cleanup must use SafeFileOps
+        $fullTuneUpSource = Get-Content -Path "$PSScriptRoot/../../src/modules/FullTuneUp.ps1" -Raw
+        # The prefetch section should call Remove-CleanupItem, not Remove-Item
+        $fullTuneUpSource | Should -BeLike '*Remove-CleanupItem*'
+        # Remove-Item should not appear in prefetch context (only Remove-CleanupItem)
+        $prefetchSection = ($fullTuneUpSource -split 'Prefetch cleanup')[1] -split 'DISM component cleanup'
+        $prefetchSection[0] | Should -Not -BeLike '*Remove-Item*'
     }
 
     It 'should count performance and privacy tweaks in WhatIf mode' {

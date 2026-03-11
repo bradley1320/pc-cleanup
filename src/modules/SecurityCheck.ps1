@@ -32,7 +32,7 @@ function Get-DefenderStatus {
         $mpStatus = Get-MpComputerStatus -ErrorAction Stop
 
         $status.Available = $true
-        $status.Enabled = -not $mpStatus.AntivirusEnabled -eq $false
+        $status.Enabled = [bool]$mpStatus.AntivirusEnabled
         $status.RealTimeProtection = $mpStatus.RealTimeProtectionEnabled
         $status.EngineVersion = $mpStatus.AMEngineVersion
 
@@ -288,7 +288,7 @@ function Get-SecurityReport {
     $updates = Get-PendingUpdates
     if ($updates.Count -ge 0) {
         $updColor = if ($updates.Count -eq 0) { 'Green' } elseif ($updates.Count -le 5) { 'Yellow' } else { 'Red' }
-        Write-Host "    Pending updates: $($updates.Count)" -ForegroundColor $updColor
+        Write-Host "    Pending updates: $($updates.Count) (including drivers and definitions)" -ForegroundColor $updColor
         if ($updates.Count -gt 0) {
             $issues++
             # Show first 5 update titles

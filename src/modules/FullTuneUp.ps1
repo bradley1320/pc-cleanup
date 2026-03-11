@@ -34,13 +34,32 @@ function Invoke-FullTuneUp {
     )
 
     Write-Host ""
-    Write-Host "  ==============================" -ForegroundColor Cyan
-    Write-Host "       FULL TUNE-UP (Safe)       " -ForegroundColor Cyan
-    Write-Host "  ==============================" -ForegroundColor Cyan
+    Write-Host "  ==============================" -ForegroundColor DarkCyan
+    Write-Host "       FULL TUNE-UP (Safe)       " -ForegroundColor DarkCyan
+    Write-Host "  ==============================" -ForegroundColor DarkCyan
     Write-Host ""
 
     if ($WhatIf) {
         Write-Info 'WhatIf mode -- previewing changes without applying.'
+        Write-Host ""
+    }
+
+    # Show what will happen and require confirmation before proceeding
+    Write-Host "  Full Tune-Up will:" -ForegroundColor White
+    Write-Host "    - Clean temp files and caches"
+    Write-Host "    - Apply safe-tier performance tweaks"
+    Write-Host "    - Apply safe-tier privacy tweaks"
+    Write-Host "    - Clean Prefetch files (admin only)"
+    Write-Host "    - Run DISM component cleanup (optional, admin only)"
+    Write-Host ""
+    Write-Host "  A System Restore Point will be created first." -ForegroundColor Gray
+    Write-Host ""
+
+    if (-not $WhatIf) {
+        if (-not (Get-UserConfirmation -Prompt 'Proceed with Full Tune-Up?' -Default 'Y')) {
+            Write-Skip 'Full Tune-Up cancelled.'
+            return
+        }
         Write-Host ""
     }
 
@@ -162,13 +181,8 @@ function Invoke-FullTuneUp {
                     $prefetchFiles = Get-ChildItem -Path $prefetchPath -File -ErrorAction SilentlyContinue
                     $count = 0
                     foreach ($file in $prefetchFiles) {
-                        try {
-                            Remove-Item -LiteralPath $file.FullName -Force -ErrorAction Stop
-                            $count++
-                        }
-                        catch {
-                            $null = $_
-                        }
+                        $removeResult = Remove-CleanupItem -Path $file.FullName
+                        $count += $removeResult.DeletedFiles
                     }
                     Write-Success "Cleaned $count prefetch files."
                     $summary.PrefetchCleaned = $true

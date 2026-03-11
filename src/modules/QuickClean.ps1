@@ -121,6 +121,45 @@ function Get-BrowserProfiles {
     return $results
 }
 
+function Measure-RecycleBin {
+    <#
+    .SYNOPSIS
+        Measures the Recycle Bin item count and total size.
+    .DESCRIPTION
+        Uses Shell.Application COM object to enumerate Recycle Bin contents.
+        Returns file count and total bytes without modifying anything.
+    .OUTPUTS
+        [PSCustomObject] With FileCount, TotalBytes, and Estimated properties.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $result = [PSCustomObject]@{
+        FileCount  = 0
+        TotalBytes = [long]0
+        Estimated  = $false
+    }
+
+    try {
+        $shell = New-Object -ComObject Shell.Application
+        $bin = $shell.NameSpace(0x0a)
+        if ($null -eq $bin) { return $result }
+
+        $items = @($bin.Items())
+        $result.FileCount = $items.Count
+        foreach ($item in $items) {
+            try { $result.TotalBytes += $item.Size } catch { $null = $_ }
+        }
+
+        [Runtime.InteropServices.Marshal]::ReleaseComObject($shell) | Out-Null
+    }
+    catch {
+        $null = $_
+    }
+
+    return $result
+}
+
 function Get-CleanupTargets {
     <#
     .SYNOPSIS
@@ -165,7 +204,7 @@ function Get-CleanupTargets {
 
         if ($ShowProgress) { Write-Host "    Scanning $($def.Name)..." -ForegroundColor Gray -NoNewline }
 
-        $scan = Measure-DirectorySafe -Path $def.Path
+        $scan = Measure-DirectorySafe -Path $def.Path -MaxFiles 10000
         $target = [PSCustomObject]@{
             Name          = $def.Name
             Hint          = $def.Hint
@@ -189,13 +228,39 @@ function Get-CleanupTargets {
         }
     }
 
+    # --- Recycle Bin ---
+    if ($ShowProgress) { Write-Host '    Scanning Recycle Bin...' -ForegroundColor Gray -NoNewline }
+
+    $rbScan = Measure-RecycleBin
+    if ($rbScan.FileCount -gt 0) {
+        $target = [PSCustomObject]@{
+            Name          = 'Recycle Bin'
+            Hint          = 'Deleted files waiting to be permanently removed'
+            Path          = 'RecycleBin'
+            FileCount     = $rbScan.FileCount
+            Size          = $rbScan.TotalBytes
+            Estimated     = $false
+            Type          = 'recyclebin'
+            RequiresAdmin = $false
+        }
+        $targets += $target
+
+        if ($ShowProgress) {
+            $sizeText = Format-FileSize -Bytes $rbScan.TotalBytes
+            Write-Host "`r    Recycle Bin: $($rbScan.FileCount) items, $sizeText     " -ForegroundColor White
+        }
+    }
+    elseif ($ShowProgress) {
+        Write-Host "`r    Recycle Bin: empty     " -ForegroundColor Gray
+    }
+
     # --- Browser Caches ---
     if ($ShowProgress) { Write-Host '    Scanning browser caches...' -ForegroundColor Gray -NoNewline }
 
     $browsers = Get-BrowserProfiles
     $browserCount = 0
     foreach ($browser in $browsers) {
-        $scan = Measure-DirectorySafe -Path $browser.CachePath
+        $scan = Measure-DirectorySafe -Path $browser.CachePath -MaxFiles 10000
         if ($scan.FileCount -gt 0) {
             $displayName = "$($browser.Browser) Cache"
             if ($browser.Profile -ne 'Default') {
@@ -450,6 +515,21 @@ function Invoke-Cleanup {
         }
 
         Write-Info "Cleaning: $($target.Name)..."
+
+        # Recycle Bin uses Clear-RecycleBin (not SafeFileOps)
+        if ($target.Type -eq 'recyclebin') {
+            try {
+                Clear-RecycleBin -Force -ErrorAction Stop
+                $summary.TotalFiles += $target.FileCount
+                $summary.TotalBytes += $target.Size
+                Write-Success "Recycle Bin: $(Format-FileSize -Bytes $target.Size) recovered ($($target.FileCount) items)"
+            }
+            catch {
+                $summary.Errors++
+                Write-Warn "Could not empty Recycle Bin: $($_.Exception.Message)"
+            }
+            continue
+        }
 
         # Stop Windows Update service before cleaning WU cache
         if ($target.Type -eq 'wucache' -and -not $wuServiceStopped) {

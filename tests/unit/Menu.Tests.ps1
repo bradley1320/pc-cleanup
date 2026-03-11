@@ -248,6 +248,50 @@ Describe 'Show-SelectionMenu' {
         $selectedNames | Should -Not -Contain 'Prefetch'
         $selectedNames | Should -Not -Contain 'EdgeCache'
     }
+
+    It 'should handle space-separated numbers (1 2 3)' {
+        Mock Read-Host { return '1 3 5' }
+        $items = @(
+            [PSCustomObject]@{ Name = 'A'; Description = ''; Selected = $false }
+            [PSCustomObject]@{ Name = 'B'; Description = ''; Selected = $false }
+            [PSCustomObject]@{ Name = 'C'; Description = ''; Selected = $false }
+            [PSCustomObject]@{ Name = 'D'; Description = ''; Selected = $false }
+            [PSCustomObject]@{ Name = 'E'; Description = ''; Selected = $false }
+        )
+        $result = @(Show-SelectionMenu -Title 'Test' -Items $items)
+        $result.Count | Should -Be 3
+        $names = @($result | ForEach-Object { $_.Name })
+        $names | Should -Contain 'A'
+        $names | Should -Contain 'C'
+        $names | Should -Contain 'E'
+    }
+
+    It 'should handle comma-space-separated numbers (1, 2, 3)' {
+        Mock Read-Host { return '2, 4' }
+        $items = @(
+            [PSCustomObject]@{ Name = 'A'; Description = ''; Selected = $false }
+            [PSCustomObject]@{ Name = 'B'; Description = ''; Selected = $false }
+            [PSCustomObject]@{ Name = 'C'; Description = ''; Selected = $false }
+            [PSCustomObject]@{ Name = 'D'; Description = ''; Selected = $false }
+        )
+        $result = @(Show-SelectionMenu -Title 'Test' -Items $items)
+        $result.Count | Should -Be 2
+        $names = @($result | ForEach-Object { $_.Name })
+        $names | Should -Contain 'B'
+        $names | Should -Contain 'D'
+    }
+
+    It 'should handle single number input' {
+        Mock Read-Host { return '3' }
+        $items = @(
+            [PSCustomObject]@{ Name = 'A'; Description = ''; Selected = $false }
+            [PSCustomObject]@{ Name = 'B'; Description = ''; Selected = $false }
+            [PSCustomObject]@{ Name = 'C'; Description = ''; Selected = $false }
+        )
+        $result = @(Show-SelectionMenu -Title 'Test' -Items $items)
+        $result.Count | Should -Be 1
+        $result[0].Name | Should -Be 'C'
+    }
 }
 
 Describe 'Show-ReportMenu' {

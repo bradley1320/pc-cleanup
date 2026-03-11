@@ -106,6 +106,9 @@ function Test-ConfigIntegrity {
 
     if ($modified.Count -eq 0) { return $true }
 
+    # tweaks.json contains executable scripts -- tamper = hard block (no bypass)
+    $hasCriticalTamper = 'tweaks.json' -in $modified
+
     Write-Host ""
     Write-Host "  *** WARNING: Configuration files have been modified ***" -ForegroundColor Red
     Write-Host ""
@@ -119,6 +122,13 @@ function Test-ConfigIntegrity {
     Write-Host ""
     Write-Host "  To restore originals, re-extract from the distribution ZIP." -ForegroundColor Yellow
     Write-Host ""
+
+    if ($hasCriticalTamper) {
+        Write-Host "  BLOCKED: tweaks.json has been modified. This file contains executable" -ForegroundColor Red
+        Write-Host "  scripts and cannot be used when tampered. Restore from original ZIP." -ForegroundColor Red
+        Write-Host ""
+        return $false
+    }
 
     $response = Read-Host "  Continue anyway? (Y/N)"
     if ($response -notmatch '^[Yy]') {
@@ -197,6 +207,18 @@ if ($ProfileName) {
     $profileRisk = $selectedProfile.risk
     $profileModules = @($selectedProfile.modules)
     $profileCategories = @($selectedProfile.includeCategories)
+
+    # Security: clamp risk to hardcoded maximum per profile name.
+    # Prevents a modified profiles.json from escalating "Safe" to "advanced".
+    $maxRiskPerProfile = @{ 'Safe' = 'safe'; 'Gaming' = 'safe'; 'Privacy' = 'moderate' }
+    $riskOrder = @('safe', 'moderate', 'advanced')
+    if ($maxRiskPerProfile.ContainsKey($ProfileName)) {
+        $maxRisk = $maxRiskPerProfile[$ProfileName]
+        if ($riskOrder.IndexOf($profileRisk) -gt $riskOrder.IndexOf($maxRisk)) {
+            Write-Warn "Profile '$ProfileName' has elevated risk '$profileRisk' in profiles.json. Clamping to '$maxRisk'."
+            $profileRisk = $maxRisk
+        }
+    }
 
     if ($WhatIf) {
         Write-Info 'WhatIf mode -- previewing changes without applying.'

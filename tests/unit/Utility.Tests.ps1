@@ -48,11 +48,11 @@ Describe 'Write-Success' {
 }
 
 Describe 'Write-Info' {
-    It 'should write cyan text to host' {
+    It 'should write DarkCyan text to host' {
         Mock -CommandName Write-Host -MockWith {}
         Mock -CommandName Write-Log -MockWith {}
         Write-Info -Message 'Information here'
-        Should -Invoke Write-Host -Times 1 -ParameterFilter { $ForegroundColor -eq 'Cyan' }
+        Should -Invoke Write-Host -Times 1 -ParameterFilter { $ForegroundColor -eq 'DarkCyan' }
     }
 }
 

@@ -159,6 +159,15 @@ Describe 'Tweaks Catalog Validation' {
         @($script:AllTweaks | Where-Object { $_.category -eq 'Performance' }).Count | Should -Be 9
     }
 
+    It 'UserPreferencesMask should be Binary type (not String)' {
+        $perf = $script:AllTweaks | Where-Object { $_.Id -eq 'OptimizeVisualEffects' }
+        $perf | Should -Not -BeNullOrEmpty
+        $upm = $perf.registry | Where-Object { $_.name -eq 'UserPreferencesMask' }
+        $upm | Should -Not -BeNullOrEmpty
+        $upm.type | Should -Be 'Binary' -Because 'Windows stores UserPreferencesMask as REG_BINARY'
+        @($upm.value).Count | Should -Be 8 -Because 'Binary value should be an 8-byte array'
+    }
+
     It 'BlockTelemetryFirewall should have invokeScript and undoScript' {
         $fw = $script:AllTweaks | Where-Object { $_.Id -eq 'BlockTelemetryFirewall' }
         $fw | Should -Not -BeNullOrEmpty

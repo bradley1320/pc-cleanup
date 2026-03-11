@@ -638,9 +638,9 @@
       {
         "path": "HKCU:\\Control Panel\\Desktop",
         "name": "UserPreferencesMask",
-        "value": "9012038010000000",
-        "type": "String",
-        "defaultValue": "9E3E078012000000"
+        "value": [144, 18, 3, 128, 16, 0, 0, 0],
+        "type": "Binary",
+        "defaultValue": [158, 62, 7, 128, 18, 0, 0, 0]
       },
       {
         "path": "HKCU:\\Control Panel\\Desktop",

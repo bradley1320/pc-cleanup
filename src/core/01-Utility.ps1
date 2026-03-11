@@ -50,7 +50,7 @@ function Write-Info {
         [string]$Message
     )
 
-    Write-Host "  [i] $Message" -ForegroundColor Cyan
+    Write-Host "  [i] $Message" -ForegroundColor DarkCyan
     Write-Log -Message "[INFO] $Message"
 }
 

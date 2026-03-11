@@ -140,23 +140,26 @@ function Show-PerformanceMenu {
         return
     }
 
-    # Toggle by number
-    if ($choice -match '^\d+$') {
-        $toggleIndex = [int]$choice
-        $toggleItem = $displayList | Where-Object { $_.Index -eq $toggleIndex }
-        if ($toggleItem) {
-            if ($toggleItem.Applied) {
-                Invoke-Tweak -Name $toggleItem.Id -Undo
-                if ($toggleItem.Id -in $script:VisualTweakIds) { Invoke-ExplorerRefresh }
+    # Toggle by number (supports comma/space-separated: 1,2,3 or 1 2 3 or 1, 2, 3)
+    if ($choice -match '^\d+([,\s]+\d+)*$') {
+        $numbers = $choice -split '[,\s]+' | Where-Object { $_ -ne '' } | ForEach-Object { [int]$_ }
+        $appliedVisual = $false
+        foreach ($toggleIndex in $numbers) {
+            $toggleItem = $displayList | Where-Object { $_.Index -eq $toggleIndex }
+            if ($toggleItem) {
+                if ($toggleItem.Applied) {
+                    Invoke-Tweak -Name $toggleItem.Id -Undo
+                }
+                else {
+                    Invoke-Tweak -Name $toggleItem.Id
+                }
+                if ($toggleItem.Id -in $script:VisualTweakIds) { $appliedVisual = $true }
             }
             else {
-                Invoke-Tweak -Name $toggleItem.Id
-                if ($toggleItem.Id -in $script:VisualTweakIds) { Invoke-ExplorerRefresh }
+                Write-Warn "Invalid number: $toggleIndex"
             }
         }
-        else {
-            Write-Warn "Invalid number: $toggleIndex"
-        }
+        if ($appliedVisual) { Invoke-ExplorerRefresh }
         return
     }
 

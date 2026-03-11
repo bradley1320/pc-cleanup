@@ -1,25 +1,25 @@
 # PC Cleanup v2
 
-> The Windows optimizer you can read, understand, and undo -- one tweak at a time.
+> A Windows optimizer that doesn't hide what it's doing.
 
-PC Cleanup is an open-source PowerShell toolkit that cleans junk files, optimizes performance settings, disables telemetry and tracking, checks security health, and proves its results with before/after metrics.
+Most Windows "optimization" tools are black boxes. You run them, stuff happens, and you hope for the best. PC Cleanup is the opposite -- you can read every tweak it makes, undo any of them, and if you're still not sure, paste the whole thing into an AI and ask it what's going on.
 
-Every change is explained in plain English, every change is reversible, and the code is designed to be pasted into AI for verification.
+It cleans junk files, tunes performance settings, reins in Windows telemetry, checks your security posture, and gives you before/after metrics so you can see if it actually did anything.
 
 ## Quick Start
 
 1. Download the latest release ZIP from [Releases](https://github.com/bradley1320/pc-cleanup/releases)
-2. **Right-click the ZIP > Properties > check "Unblock" > OK** (mandatory -- without this, Windows blocks unsigned scripts)
+2. **Right-click the ZIP > Properties > check "Unblock" > OK** (this is mandatory -- Windows blocks unsigned scripts without it)
 3. Extract the ZIP
 4. Right-click `Run.bat` > **Run as Administrator**
 
-That's it. No install, no dependencies, no internet required.
+That's it. No installer, no dependencies, no internet connection needed.
 
 ## Requirements
 
 - Windows 10 or Windows 11 (any edition)
-- PowerShell 5.1 (built into Windows -- no additional install needed)
-- Administrator privileges (recommended for full functionality; most features work without admin)
+- PowerShell 5.1 (already on your machine -- it ships with Windows)
+- Administrator privileges for full functionality (most features still work without admin)
 
 ## What It Does
 
@@ -40,14 +40,16 @@ That's it. No install, no dependencies, no internet required.
 
 ### Tweak Catalog
 
-29 data-driven tweaks defined in `config/tweaks.json`:
+All 29 tweaks live in `config/tweaks.json` -- a plain JSON file you can open in any text editor. No tweaks are buried in code.
+
 - **20 Privacy tweaks** -- telemetry, advertising, activity history, Cortana, Copilot, error reporting, and more
 - **9 Performance tweaks** -- visual effects, transparency, game mode, power plan, startup delay, and more
 
-Every tweak is categorized by risk:
-- **Safe (18 tweaks)** -- applied by default in Full Tune-Up. No functionality impact.
-- **Moderate (8 tweaks)** -- user must explicitly opt in. May affect specific features (e.g., disabling DiagTrack can break Xbox achievements).
-- **Advanced (3 tweaks)** -- power users only. Significant breakage potential (e.g., firewall rules blocking telemetry endpoints).
+Every tweak has a risk tier:
+
+- **Safe (18 tweaks)** -- these are the defaults in Full Tune-Up. They won't break anything.
+- **Moderate (8 tweaks)** -- you have to opt in. Some have real trade-offs (disabling DiagTrack can break Xbox achievements, for instance).
+- **Advanced (3 tweaks)** -- for people who know what they're doing. Firewall rules blocking telemetry endpoints, that kind of thing.
 
 ## CLI Usage
 
@@ -76,98 +78,71 @@ Every tweak is categorized by risk:
 
 ## Safety Design
 
-PC Cleanup creates multiple safety layers before making any changes:
-
-1. **System Restore Point** -- automatic before the first modification (graceful fallback if System Restore is disabled)
-2. **Registry backup** -- timestamped .reg export of modified hives
-3. **Per-tweak undo log** -- captures the actual current values on YOUR system at apply time, stored in `%LOCALAPPDATA%\PCCleanup\undo_log.json`
-4. **Change logging** -- every operation is logged with timestamps
+Before the tool changes anything, it creates a System Restore Point (or skips gracefully if that's disabled on your machine), exports a timestamped `.reg` backup of the registry hives it's about to touch, and saves the actual current value of every setting to an undo log at `%LOCALAPPDATA%\PCCleanup\undo_log.json`. Everything gets a timestamped log entry too. On top of that, the compiled script has SHA-256 hashes of all config files baked in at build time -- if someone tampers with the JSON, you'll get a warning before anything runs.
 
 ### Undo System
 
-The undo system captures your actual system state before each change -- not hardcoded defaults. If you already customized a setting, undoing restores YOUR value, not Microsoft's default.
+When you undo a tweak, it doesn't just slam in some generic default. It saved what your machine actually had before the change, so that's what it puts back. If you'd already customized something, you get your setting back, not Microsoft's.
 
-- Undo a specific tweak: menu option 10 > select tweak, or `.\pccleanup.ps1 -Undo "TweakName"`
+- Undo one tweak: menu option 10 > pick the tweak, or `.\pccleanup.ps1 -Undo "TweakName"`
 - Undo everything: menu option 10 > Undo All, or `.\pccleanup.ps1 -Undo All`
-- Last resort: use System Restore to the automatic restore point
+- Nuclear option: use System Restore to roll back to the automatic restore point
 
 ## Is This Safe?
 
-This tool is designed for transparency. Here's how to verify it yourself:
+Don't trust me -- check it yourself. `pccleanup.ps1` is a single readable PowerShell file, and `config/tweaks.json` lists every registry key, service, and scheduled task the tool touches, with links to Microsoft's docs. Open either one in a text editor and you can see exactly what's going on.
 
-### Option 1: Read the Code
+Or just paste the script (or the JSON) into ChatGPT, Claude, Gemini, whatever, and ask if it does anything sketchy.
 
-The compiled `pccleanup.ps1` is a single PowerShell script. Open it in any text editor and read it. Every function is documented with comment-based help.
-
-### Option 2: Read the Tweak Catalog
-
-Open `config/tweaks.json` in any text editor or JSON viewer. Every tweak lists:
-- What registry keys it changes and to what values
-- What services it modifies
-- What scheduled tasks it disables
-- A `docsUrl` linking to Microsoft's official documentation
-- A `detail` field explaining what the tweak does and what might break
-
-### Option 3: Ask AI to Verify
-
-Copy any module or the entire script into ChatGPT, Claude, Gemini, or any AI and ask:
-
-**For the whole tool:**
-> "Review this PowerShell script. Does it do anything malicious? Does it make any irreversible changes? Does it access the network? Does it collect or transmit any data?"
-
-**For specific modules:**
-> "Review this PowerShell function. What registry keys does it modify? Are the changes reversible? Could it break anything?"
-
-**For the tweak catalog:**
-> "Review this JSON file. For each tweak, verify that the registry paths are legitimate Windows settings and the described behavior matches what the values actually do."
-
-### Option 4: Use -WhatIf
-
-Run `.\pccleanup.ps1 -WhatIf` to see exactly what would happen without making any changes. Every module supports WhatIf mode.
+You can also run `.\pccleanup.ps1 -WhatIf` to preview every change without actually applying anything.
 
 ## What This Tool Does NOT Do
 
-These features are deliberately excluded:
+There's a whole category of "optimization" advice floating around that ranges from useless to actively harmful. Here's what PC Cleanup deliberately skips, and why:
 
-- **Registry cleaning** -- Microsoft says don't do it. Malwarebytes calls it snake oil. Registry "errors" don't affect performance.
-- **RAM boosting / memory freeing** -- Forces Windows to flush its smart caching (SuperFetch), actively making your PC slower.
-- **Driver installation** -- Too risky for an automated tool. We inform, not install.
-- **Disabling Windows Update** -- Security risk. Your PC needs updates.
-- **Disabling Windows Defender** -- Security risk. Your PC needs antivirus.
-- **Disabling UAC** -- Lowers your security posture. Always harmful.
-- **Disabling PageFile** -- Myth that it helps with high RAM. Causes out-of-memory crashes under load.
-- **Disabling SysMain/SuperFetch** -- Myth that it helps SSDs. It intelligently preloads apps with near-zero I/O. Disabling it makes things slower.
-- **Removing UWP/Appx packages** -- Functionally irreversible on Windows 11 24H2. Breaks the Microsoft Store and can break File Explorer.
-- **App installation** -- Not our scope. Use [WinUtil](https://github.com/ChrisTitusTech/winutil) for that.
-- **GUI** -- A GUI would defeat the "paste into AI to verify" transparency model.
+- **Registry cleaning** -- Microsoft's official position is "don't." Malwarebytes calls it snake oil. Those thousands of "registry errors" that cleaners find? They don't affect performance. At all.
+- **RAM boosting** -- These tools force Windows to dump its SuperFetch cache to disk, which sounds like "freeing memory" but actually makes your next app launch slower. Your OS already manages RAM better than a third-party tool can.
+- **Driver installation** -- Way too risky for an automated tool. If your driver situation needs fixing, you want a human making those calls.
+- **Disabling Windows Update** -- I know it's tempting. But your PC genuinely needs security patches.
+- **Disabling Windows Defender** -- Same deal. You need an antivirus, and the one built into your OS is honestly pretty good these days.
+- **Disabling UAC** -- Those prompts are annoying, I get it. But UAC is a real security boundary, not just a nag screen.
+- **Disabling PageFile** -- The "I have 32GB of RAM so I don't need a page file" thing is a myth. The Windows memory manager uses the page file to move dormant pages around even when you have tons of free RAM. Disabling it causes out-of-memory crashes under load.
+- **Disabling SysMain/SuperFetch** -- Another persistent myth, especially for SSD users. SysMain pre-loads frequently used DLLs into standby memory with essentially zero I/O cost on an SSD. Disabling it increases page faults.
+- **Removing UWP/Appx packages** -- On Windows 11 24H2, removing certain packages breaks File Explorer (dark mode, tabs, XAML stuff). And once you remove a system package, getting it back is a nightmare. We're not touching this.
+- **App installation** -- Not our lane. [WinUtil](https://github.com/ChrisTitusTech/winutil) does this really well already.
+- **GUI** -- A graphical interface would undermine the whole "paste it into an AI to verify" model. The tool is a script on purpose.
 
 ## Troubleshooting
 
 ### "Windows protected your PC" (SmartScreen)
 
-You forgot to unblock the ZIP. Right-click the ZIP > Properties > check "Unblock" > OK, then re-extract.
+You skipped the unblock step. Go back to the ZIP file, right-click > Properties > check "Unblock" > OK, then extract it again.
 
 ### Script opens and immediately closes
 
-This is likely AMSI (Antimalware Scan Interface) blocking execution. Add the extracted folder to Windows Defender's exclusion list:
+Windows Defender's AMSI (Antimalware Scan Interface) sometimes flags PowerShell scripts that modify registry keys related to telemetry. The fix is to add the extracted folder to Defender's exclusion list:
+
 1. Open Windows Security > Virus & threat protection > Manage settings
 2. Scroll to Exclusions > Add or remove exclusions
 3. Add the folder where you extracted PC Cleanup
 
 ### "Running scripts is disabled on this system"
 
-The `Run.bat` launcher sets `-ExecutionPolicy Bypass` which should handle this. If you're running `pccleanup.ps1` directly, run this first:
+`Run.bat` already handles this with `-ExecutionPolicy Bypass`. If you're running `pccleanup.ps1` directly instead, set the policy for your session first:
+
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
 ```
 
 ### A tweak didn't seem to work
 
-Some changes (especially visual effects and taskbar tweaks) require Explorer to restart. The tool broadcasts a settings change notification, but if that doesn't work, restart Explorer manually or reboot.
+Visual effects and taskbar tweaks sometimes need Explorer to restart before they're visible. The tool tries to notify the shell automatically, but if things look the same, try restarting Explorer or just rebooting.
 
 ### Boot time didn't improve after Full Tune-Up
 
-The first reboot after changes is often slower. Restart twice before taking an "after" snapshot. Boot time measurement uses Event ID 100 when available, with a WMI fallback (if privacy tweaks disabled diagnostic logging, the fallback is less granular).
+Give it two reboots. The first boot after making changes is almost always slower than normal (Windows is reconfiguring things). Take your "after" snapshot on the second clean boot for an accurate comparison.
+
+The boot time measurement uses Event ID 100 from Windows diagnostics when available, with a WMI fallback. If your privacy tweaks disabled diagnostic logging, the fallback measurement is less granular -- the tool will tell you which source it's using.
 
 ## Project Structure
 
@@ -183,7 +158,7 @@ pc-cleanup-v2.zip
     profiles.json      # Preset profiles
 ```
 
-Config files ship separately so you can inspect and modify them. The tweak catalog is readable data, not buried code.
+The config files ship as separate, readable files rather than being baked into the script. You can open `tweaks.json` and see exactly what every tweak does. Power users can modify it to customize their setup.
 
 ### Source (for developers)
 ```
@@ -194,7 +169,7 @@ src/
   ui/             # Interactive menu system
   main.ps1        # Entry point and CLI dispatch
 config/           # JSON configuration files
-tests/unit/       # 457 Pester tests (mocked, no admin needed)
+tests/unit/       # Pester tests (mocked, no admin needed)
 build/            # Build.ps1 (concatenate source > single .ps1)
 ```
 
@@ -217,31 +192,32 @@ Invoke-Pester -Configuration $c
 
 ### v2.0 (2026)
 
-Complete modular rewrite:
-- **Modular architecture** -- 20 source files organized by responsibility (core, handlers, modules, UI)
-- **Data-driven tweaks** -- 29 tweaks defined in JSON, not hardcoded in functions
-- **Per-tweak undo** -- captures actual system state at apply time, not hardcoded defaults
-- **Privacy Shield** -- 20 privacy tweaks across 3 risk tiers with Microsoft docs links
-- **Performance Mode** -- 9 performance tweaks with laptop/SSD detection
-- **CLI support** -- profiles, modules, risk levels, WhatIf, undo, snapshots
-- **Security Check** -- read-only health report (Defender, firewall, SMBv1, updates)
-- **System Report** -- before/after metrics with boot time measurement
-- **Disk Analysis** -- drive usage and folder size analysis
-- **Network Reset** -- isolated from optimization flow with explicit warnings
-- **457 unit tests** -- Pester 5, mocked, no admin needed
-- **0 PSScriptAnalyzer warnings** -- clean linting on every commit
-- **CI/CD** -- GitHub Actions: lint, test, build on every push
+Ground-up rewrite. Same philosophy, completely new architecture:
+
+- **Modular codebase** -- 20 source files organized by responsibility instead of one giant script
+- **Data-driven tweaks** -- all 29 tweaks defined in JSON, not scattered across functions
+- **Real undo** -- captures your actual system state at apply time, not hardcoded guesses at defaults
+- **Privacy Shield** -- 20 privacy tweaks across 3 risk tiers, each with a Microsoft docs link
+- **Performance Mode** -- 9 performance tweaks with automatic laptop/SSD detection
+- **Full CLI** -- profiles, per-module targeting, risk levels, WhatIf dry-runs, snapshots
+- **Security Check** -- read-only health report (Defender, firewall, SMBv1, pending updates)
+- **System Report** -- before/after metrics with accurate boot time measurement
+- **Disk Analysis** -- drive usage bars and recursive folder size breakdown
+- **Network Reset** -- deliberately isolated from the optimization flow with heavy warnings
+- **470+ unit tests** -- Pester 5, fully mocked, no admin privileges needed to run them
+- **Clean lint** -- 0 PSScriptAnalyzer warnings
+- **CI/CD** -- GitHub Actions running lint, tests, and build on every push
 
 ### v1.2 (2025)
 
-Original monolithic script. Single-file optimizer with basic cleanup, startup management, and privacy tweaks.
+The original. One big script that proved the concept and got some nice traction on Reddit. Basic cleanup, startup management, and privacy tweaks.
 
 ## How It's Built
 
-This project is built with [Claude Code](https://claude.ai/claude-code) (Anthropic) and designed in collaboration with Claude. The full specification is in [CLAUDE.md](CLAUDE.md), including council reviews from Grok, Gemini, and DeepSeek.
+This project is built with [Claude Code](https://claude.ai/claude-code) (Anthropic).
 
-AI-assisted development is how this project works -- we don't hide it, we own it. The code is open source and fully auditable regardless of how it was written.
+I used AI to build this. That's not a secret. The code is open source and fully auditable no matter how it was written. My style of learning is typing the code over myself, yes Claude writes it all but i ask questions along the way. 
 
 ## License
 
-[MIT](LICENSE) -- free to use, modify, and distribute.
+[MIT](LICENSE) -- do whatever you want with it.

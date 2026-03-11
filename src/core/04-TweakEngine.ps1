@@ -47,6 +47,10 @@ function Test-TweakSchema {
                         throw "tweaks.json is invalid: Tweak '$id' has a registry entry missing required field '$field'."
                     }
                 }
+                # Registry paths must start with a valid hive prefix
+                if ($reg.path -notmatch '^HK(LM|CU|CR|U|CC):\\') {
+                    throw "tweaks.json is invalid: Tweak '$id' has registry path '$($reg.path)' that is not a valid registry hive."
+                }
                 # 'value' can be 0/false which are falsy -- check for $null specifically
                 if ($null -eq $reg.value) {
                     throw "tweaks.json is invalid: Tweak '$id' has a registry entry missing required field 'value'."
@@ -84,6 +88,14 @@ function Test-TweakSchema {
                     throw "tweaks.json is invalid: Tweak '$id' has a scheduledTask entry missing required field 'enabled'."
                 }
             }
+        }
+
+        # Validate invokeScript/undoScript are arrays if present
+        if ($tweak.invokeScript -and $tweak.invokeScript -isnot [array]) {
+            throw "tweaks.json is invalid: Tweak '$id' has non-array invokeScript. Must be a JSON array."
+        }
+        if ($tweak.undoScript -and $tweak.undoScript -isnot [array]) {
+            throw "tweaks.json is invalid: Tweak '$id' has non-array undoScript. Must be a JSON array."
         }
     }
 }

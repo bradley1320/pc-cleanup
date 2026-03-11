@@ -119,6 +119,180 @@ Describe 'Get-AppliedTweaks' {
         $result = Get-AppliedTweaks
         $result | Should -HaveCount 0
     }
+
+    It 'should skip entries with missing TweakName' {
+        New-Item -ItemType Directory -Path $script:UndoLogDir -Force | Out-Null
+        @([PSCustomObject]@{
+            AppliedAt = (Get-Date).ToString('o')
+            AppliedOnBuild = 22631
+            Category = 'Privacy'
+            Changes = @([PSCustomObject]@{ Type = 'Registry'; Path = 'HKLM:\Test'; Name = 'Val'; OriginalValue = 1; OriginalType = 'DWord'; KeyExistedBefore = $true })
+        }) | ConvertTo-Json -Depth 10 | Set-Content -Path $script:UndoLogPath
+        $result = Get-AppliedTweaks
+        $result | Should -HaveCount 0
+    }
+
+    It 'should skip entries with empty Changes array' {
+        New-Item -ItemType Directory -Path $script:UndoLogDir -Force | Out-Null
+        @([PSCustomObject]@{
+            TweakName = 'BadTweak'
+            AppliedAt = (Get-Date).ToString('o')
+            AppliedOnBuild = 22631
+            Category = 'Privacy'
+            Changes = @()
+        }) | ConvertTo-Json -Depth 10 | Set-Content -Path $script:UndoLogPath
+        $result = Get-AppliedTweaks
+        $result | Should -HaveCount 0
+    }
+
+    It 'should skip entries with invalid change Type' {
+        New-Item -ItemType Directory -Path $script:UndoLogDir -Force | Out-Null
+        @([PSCustomObject]@{
+            TweakName = 'InjectionTweak'
+            AppliedAt = (Get-Date).ToString('o')
+            AppliedOnBuild = 22631
+            Category = 'Privacy'
+            Changes = @([PSCustomObject]@{ Type = 'Exec'; Command = 'malicious-command' })
+        }) | ConvertTo-Json -Depth 10 | Set-Content -Path $script:UndoLogPath
+        $result = Get-AppliedTweaks
+        $result | Should -HaveCount 0
+    }
+
+    It 'should skip registry changes with missing Path' {
+        New-Item -ItemType Directory -Path $script:UndoLogDir -Force | Out-Null
+        @([PSCustomObject]@{
+            TweakName = 'BadReg'
+            AppliedAt = (Get-Date).ToString('o')
+            AppliedOnBuild = 22631
+            Category = 'Privacy'
+            Changes = @([PSCustomObject]@{ Type = 'Registry'; Name = 'Val'; OriginalValue = 1; OriginalType = 'DWord'; KeyExistedBefore = $true })
+        }) | ConvertTo-Json -Depth 10 | Set-Content -Path $script:UndoLogPath
+        $result = Get-AppliedTweaks
+        $result | Should -HaveCount 0
+    }
+
+    It 'should keep valid entries and skip invalid ones in mixed log' {
+        $changes = @([PSCustomObject]@{ Type = 'Registry'; Path = 'HKLM:\Test'; Name = 'Val'; OriginalValue = 1; OriginalType = 'DWord'; KeyExistedBefore = $true })
+        Register-AppliedTweak -Name 'ValidTweak' -Changes $changes -Category 'Privacy'
+        # Inject a malformed entry directly into the log
+        $log = Get-Content -Path $script:UndoLogPath -Raw | ConvertFrom-Json
+        $log = @($log)
+        $log += [PSCustomObject]@{ TweakName = ''; AppliedAt = ''; Changes = $null }
+        $log | ConvertTo-Json -Depth 10 | Set-Content -Path $script:UndoLogPath
+        $result = Get-AppliedTweaks
+        @($result).Count | Should -Be 1
+        @($result)[0].TweakName | Should -Be 'ValidTweak'
+    }
+}
+
+Describe 'Test-UndoLogEntry' {
+    It 'should accept valid registry entry' {
+        $entry = [PSCustomObject]@{
+            TweakName = 'TestTweak'
+            AppliedAt = (Get-Date).ToString('o')
+            Changes = @([PSCustomObject]@{ Type = 'Registry'; Path = 'HKLM:\Test'; Name = 'Val'; OriginalValue = 1; OriginalType = 'DWord'; KeyExistedBefore = $true })
+        }
+        Test-UndoLogEntry $entry | Should -BeTrue
+    }
+
+    It 'should accept valid service entry' {
+        $entry = [PSCustomObject]@{
+            TweakName = 'SvcTweak'
+            AppliedAt = (Get-Date).ToString('o')
+            Changes = @([PSCustomObject]@{ Type = 'Service'; Name = 'TestSvc'; OriginalStartupType = 'Automatic'; OriginalStatus = 'Running' })
+        }
+        Test-UndoLogEntry $entry | Should -BeTrue
+    }
+
+    It 'should accept valid scheduled task entry' {
+        $entry = [PSCustomObject]@{
+            TweakName = 'TaskTweak'
+            AppliedAt = (Get-Date).ToString('o')
+            Changes = @([PSCustomObject]@{ Type = 'ScheduledTask'; Path = '\Microsoft\Windows\Test'; OriginalEnabled = $true })
+        }
+        Test-UndoLogEntry $entry | Should -BeTrue
+    }
+
+    It 'should accept valid script entry' {
+        $entry = [PSCustomObject]@{
+            TweakName = 'ScriptTweak'
+            AppliedAt = (Get-Date).ToString('o')
+            Changes = @([PSCustomObject]@{ Type = 'Script' })
+        }
+        Test-UndoLogEntry $entry | Should -BeTrue
+    }
+
+    It 'should reject null entry' {
+        Test-UndoLogEntry $null | Should -BeFalse
+    }
+
+    It 'should reject entry with null TweakName' {
+        $entry = [PSCustomObject]@{ TweakName = $null; AppliedAt = 'x'; Changes = @(@{Type='Script'}) }
+        Test-UndoLogEntry $entry | Should -BeFalse
+    }
+
+    It 'should reject entry with unknown change Type' {
+        $entry = [PSCustomObject]@{
+            TweakName = 'Bad'
+            AppliedAt = (Get-Date).ToString('o')
+            Changes = @([PSCustomObject]@{ Type = 'Exec'; Command = 'rm -rf /' })
+        }
+        Test-UndoLogEntry $entry | Should -BeFalse
+    }
+
+    It 'should reject registry change without Path' {
+        $entry = [PSCustomObject]@{
+            TweakName = 'Bad'
+            AppliedAt = (Get-Date).ToString('o')
+            Changes = @([PSCustomObject]@{ Type = 'Registry'; Name = 'Val' })
+        }
+        Test-UndoLogEntry $entry | Should -BeFalse
+    }
+
+    It 'should reject service change without Name' {
+        $entry = [PSCustomObject]@{
+            TweakName = 'Bad'
+            AppliedAt = (Get-Date).ToString('o')
+            Changes = @([PSCustomObject]@{ Type = 'Service'; OriginalStartupType = 'Automatic' })
+        }
+        Test-UndoLogEntry $entry | Should -BeFalse
+    }
+
+    It 'should accept valid StartupRegistry entry' {
+        $entry = [PSCustomObject]@{
+            TweakName = 'Startup_TestApp'
+            AppliedAt = (Get-Date).ToString('o')
+            Changes = @([PSCustomObject]@{ Type = 'StartupRegistry'; Path = 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run'; Name = 'TestApp'; Command = 'C:\test.exe' })
+        }
+        Test-UndoLogEntry $entry | Should -BeTrue
+    }
+
+    It 'should accept valid StartupFolder entry with FilePath' {
+        $entry = [PSCustomObject]@{
+            TweakName = 'Startup_TestLink'
+            AppliedAt = (Get-Date).ToString('o')
+            Changes = @([PSCustomObject]@{ Type = 'StartupFolder'; FilePath = 'C:\Users\test\Startup\test.lnk'; FileName = 'test.lnk' })
+        }
+        Test-UndoLogEntry $entry | Should -BeTrue
+    }
+
+    It 'should reject StartupFolder entry without FilePath' {
+        $entry = [PSCustomObject]@{
+            TweakName = 'Startup_Bad'
+            AppliedAt = (Get-Date).ToString('o')
+            Changes = @([PSCustomObject]@{ Type = 'StartupFolder'; FileName = 'test.lnk' })
+        }
+        Test-UndoLogEntry $entry | Should -BeFalse
+    }
+
+    It 'should reject StartupRegistry entry without Path' {
+        $entry = [PSCustomObject]@{
+            TweakName = 'Startup_Bad'
+            AppliedAt = (Get-Date).ToString('o')
+            Changes = @([PSCustomObject]@{ Type = 'StartupRegistry'; Name = 'TestApp'; Command = 'test.exe' })
+        }
+        Test-UndoLogEntry $entry | Should -BeFalse
+    }
 }
 
 Describe 'Invoke-UndoTweak' {
@@ -172,6 +346,123 @@ Describe 'Invoke-UndoTweak' {
         Mock -CommandName Get-OSBuild -MockWith { 26100 }
         Invoke-UndoTweak -Name 'BuildChangeTweak'
         Should -Invoke Write-Host -ParameterFilter { $Object -like '*build*' -and $ForegroundColor -eq 'Yellow' }
+    }
+
+    It 'should refuse to undo a malformed entry injected directly into log' {
+        Mock -CommandName Set-PCCleanupRegistry -MockWith {}
+        # Write a malformed entry directly (bypassing Register-AppliedTweak validation)
+        New-Item -ItemType Directory -Path $script:UndoLogDir -Force | Out-Null
+        @([PSCustomObject]@{
+            TweakName = 'InjectedTweak'
+            AppliedAt = (Get-Date).ToString('o')
+            AppliedOnBuild = 22631
+            Category = 'Privacy'
+            Changes = @([PSCustomObject]@{ Type = 'Exec'; Command = 'malicious-command' })
+        }) | ConvertTo-Json -Depth 10 | Set-Content -Path $script:UndoLogPath
+        Invoke-UndoTweak -Name 'InjectedTweak'
+        # Should NOT have called any handler
+        Should -Invoke Set-PCCleanupRegistry -Times 0
+    }
+
+    It 'should restore StartupRegistry entries' {
+        Mock -CommandName Set-ItemProperty -MockWith {}
+        Mock -CommandName New-Item -MockWith {} -ParameterFilter { $ItemType -ne 'Directory' }
+        Mock -CommandName Test-Path -MockWith { return $true } -ParameterFilter { $Path -and $Path -like 'HKCU:*' }
+        $changes = @([PSCustomObject]@{ Type = 'StartupRegistry'; Path = 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run'; Name = 'TestApp'; Command = 'C:\test.exe' })
+        Register-AppliedTweak -Name 'Startup_TestApp' -Changes $changes -Category 'Startup'
+        Invoke-UndoTweak -Name 'Startup_TestApp'
+        Should -Invoke Set-ItemProperty -Times 1
+    }
+
+    It 'should restore StartupFolder entries by renaming disabled file' {
+        # Use a valid startup folder path (allowlisted by the security check)
+        $startupFolder = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Startup'
+        $testFilePath = Join-Path $startupFolder 'test.lnk'
+        $disabledPath = "$testFilePath.disabled"
+        Mock -CommandName Rename-Item -MockWith {}
+        Mock -CommandName Test-Path -MockWith { return $true } -ParameterFilter { $LiteralPath -and $LiteralPath -eq $disabledPath }
+        $changes = @([PSCustomObject]@{ Type = 'StartupFolder'; FilePath = $testFilePath; FileName = 'test.lnk' })
+        Register-AppliedTweak -Name 'Startup_TestLink' -Changes $changes -Category 'Startup'
+        Invoke-UndoTweak -Name 'Startup_TestLink'
+        Should -Invoke Rename-Item -Times 1
+    }
+
+    It 'should block undo with registry path not in tweak definition' {
+        Mock -CommandName Set-PCCleanupRegistry -MockWith {}
+        # Set up tweaks.json with a tweak that only allows HKCU:\Test\Val
+        $script:ConfigPath = $TestDrive
+        $testTweaks = @{
+            'LegitTweak' = @{
+                name = 'Legit Tweak'
+                description = 'Test'
+                detail = 'Detail'
+                docsUrl = 'https://example.com'
+                category = 'Privacy'
+                risk = 'safe'
+                registry = @(@{ path = 'HKCU:\Test'; name = 'Val'; value = 0; type = 'DWord'; defaultValue = 1 })
+                services = @()
+                scheduledTasks = @()
+                invokeScript = @()
+                undoScript = @()
+            }
+        }
+        $testTweaks | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $TestDrive 'tweaks.json')
+        # Register an undo entry with an INJECTED registry path (not in the tweak def)
+        $changes = @([PSCustomObject]@{ Type = 'Registry'; Path = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run'; Name = 'Backdoor'; OriginalValue = 'C:\evil.exe'; OriginalType = 'String'; KeyExistedBefore = $true })
+        Register-AppliedTweak -Name 'LegitTweak' -Changes $changes -Category 'Privacy'
+        Invoke-UndoTweak -Name 'LegitTweak'
+        # The injected path should be BLOCKED -- Set-PCCleanupRegistry should NOT be called
+        Should -Invoke Set-PCCleanupRegistry -Times 0
+    }
+
+    It 'should allow undo with registry path matching tweak definition' {
+        Mock -CommandName Set-PCCleanupRegistry -MockWith {}
+        $script:ConfigPath = $TestDrive
+        $testTweaks = @{
+            'ValidTweak' = @{
+                name = 'Valid Tweak'
+                description = 'Test'
+                detail = 'Detail'
+                docsUrl = 'https://example.com'
+                category = 'Privacy'
+                risk = 'safe'
+                registry = @(@{ path = 'HKCU:\Test'; name = 'Val'; value = 0; type = 'DWord'; defaultValue = 1 })
+                services = @()
+                scheduledTasks = @()
+                invokeScript = @()
+                undoScript = @()
+            }
+        }
+        $testTweaks | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $TestDrive 'tweaks.json')
+        $changes = @([PSCustomObject]@{ Type = 'Registry'; Path = 'HKCU:\Test'; Name = 'Val'; OriginalValue = 1; OriginalType = 'DWord'; KeyExistedBefore = $true })
+        Register-AppliedTweak -Name 'ValidTweak' -Changes $changes -Category 'Privacy'
+        Invoke-UndoTweak -Name 'ValidTweak'
+        Should -Invoke Set-PCCleanupRegistry -Times 1
+    }
+
+    It 'should bypass path validation for StartupRegistry changes' {
+        Mock -CommandName Set-ItemProperty -MockWith {}
+        Mock -CommandName New-Item -MockWith {} -ParameterFilter { $ItemType -ne 'Directory' }
+        Mock -CommandName Test-Path -MockWith { return $true } -ParameterFilter { $Path -and $Path -like 'HKCU:*' }
+        $script:ConfigPath = $TestDrive
+        # Even with no tweaks.json tweak def, StartupRegistry should still work
+        $testTweaks = @{}
+        $testTweaks | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $TestDrive 'tweaks.json')
+        $changes = @([PSCustomObject]@{ Type = 'StartupRegistry'; Path = 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run'; Name = 'TestApp'; Command = 'C:\test.exe' })
+        Register-AppliedTweak -Name 'Startup_TestApp' -Changes $changes -Category 'Startup'
+        Invoke-UndoTweak -Name 'Startup_TestApp'
+        Should -Invoke Set-ItemProperty -Times 1
+    }
+
+    It 'should gracefully skip path validation when tweaks.json is missing' {
+        Mock -CommandName Set-PCCleanupRegistry -MockWith {}
+        $script:ConfigPath = Join-Path $TestDrive 'nonexistent_config'
+        # Without tweaks.json, path validation is skipped (graceful degradation)
+        $changes = @([PSCustomObject]@{ Type = 'Registry'; Path = 'HKCU:\Test'; Name = 'Val'; OriginalValue = 1; OriginalType = 'DWord'; KeyExistedBefore = $true })
+        Register-AppliedTweak -Name 'NoJsonTweak' -Changes $changes -Category 'Privacy'
+        Invoke-UndoTweak -Name 'NoJsonTweak'
+        # Should still proceed with undo since we can't validate
+        Should -Invoke Set-PCCleanupRegistry -Times 1
     }
 
     It 'should remove the tweak entry from undo log after successful undo' {
