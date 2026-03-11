@@ -212,11 +212,10 @@ Ground-up rewrite. Same philosophy, completely new architecture:
 
 The original. One big script that proved the concept and got some nice traction on Reddit. Basic cleanup, startup management, and privacy tweaks.
 
-## How It's Built
+## Contributors
 
-This project is built with [Claude Code](https://claude.ai/claude-code) (Anthropic).
-
-I used AI to build this. That's not a secret. The code is open source and fully auditable no matter how it was written. My style of learning is typing the code over myself, yes Claude writes it all but i ask questions along the way. 
+- **bradley1320** -- creator, maintainer
+- **Claude (Anthropic)** -- contributor
 
 ## License
 
