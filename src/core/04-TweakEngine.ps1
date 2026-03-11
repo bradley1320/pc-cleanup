@@ -4,8 +4,14 @@
 # dispatches to handlers. The core of the data-driven architecture.
 # ==============================================================================
 
-# Config path -- resolved relative to core/ dir in normal usage, overridable in tests
-$script:ConfigPath = Join-Path (Split-Path $PSScriptRoot -Parent) 'config'
+# Config path -- in compiled dist, config/ is next to pccleanup.ps1 ($PSScriptRoot/config).
+# In source layout, it's two levels up from src/core/ (project root/config).
+# Tests override $script:ConfigPath directly, so this is only for runtime.
+$script:ConfigPath = if (Test-Path (Join-Path $PSScriptRoot 'config')) {
+    Join-Path $PSScriptRoot 'config'
+} else {
+    Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'config'
+}
 $script:SchemaValidated = $false
 
 function Test-TweakSchema {
