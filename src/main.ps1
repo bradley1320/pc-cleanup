@@ -235,9 +235,9 @@ if ($ProfileName) {
             }
         }
         else {
-            $targets = Get-CleanupTargets
+            $targets = @(Get-CleanupTargets)
             if ($targets.Count -gt 0) {
-                Invoke-Cleanup -Targets $targets
+                $null = Invoke-Cleanup -Targets $targets
             }
         }
     }
@@ -266,13 +266,13 @@ if ($Module) {
     Show-Banner
     switch ($Module) {
         'QuickClean' {
-            $targets = Get-CleanupTargets
+            $targets = @(Get-CleanupTargets)
             if ($targets.Count -gt 0) {
                 if ($WhatIf) {
-                    Invoke-Cleanup -Targets $targets -WhatIf
+                    $null = Invoke-Cleanup -Targets $targets -WhatIf
                 }
                 else {
-                    Invoke-Cleanup -Targets $targets
+                    $null = Invoke-Cleanup -Targets $targets
                 }
             }
             else {

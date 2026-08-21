@@ -269,6 +269,54 @@ function New-CleanupManifest {
     return $manifestPath
 }
 
+function Clear-ReadOnlyAttribute {
+    <#
+    .SYNOPSIS
+        Clears the ReadOnly attribute on a file or directory so it can be deleted.
+    .DESCRIPTION
+        Windows refuses to delete anything carrying FILE_ATTRIBUTE_READONLY:
+        FileInfo.Delete() throws UnauthorizedAccessException and DirectoryInfo.Delete()
+        throws IOException, both with "Access to the path ... is denied". Git marks every
+        loose object read-only, so a single abandoned repo under %TEMP% can leave tens of
+        thousands of undeletable files behind.
+
+        Callers must already have cleared the allowlist and reparse-point checks. This
+        only flips an advisory bit on an item that is about to be deleted -- it grants no
+        access the caller did not already have, because the ReadOnly bit is not an ACL.
+    .PARAMETER Item
+        The FileInfo or DirectoryInfo to clear. When the object came from
+        EnumerateFileSystemInfos() its attributes are already cached, so the check costs
+        no syscall -- only an actual clear touches the disk.
+    .OUTPUTS
+        [bool] $true if the ReadOnly bit was set and has now been cleared. $false if the
+        item was not read-only or the attribute write failed.
+    .EXAMPLE
+        if (Clear-ReadOnlyAttribute -Item $file) { $file.Delete() }
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [System.IO.FileSystemInfo]$Item
+    )
+
+    try {
+        # Raw int compare for the same reason as Test-IsCloudPlaceholder: PS 5.1's
+        # FileAttributes enum lacks the newer cloud flags, so casting an attribute set
+        # that contains them throws.
+        $raw = [int]$Item.Attributes
+        if (($raw -band [int][System.IO.FileAttributes]::ReadOnly) -eq 0) { return $false }
+        $Item.Attributes = [System.IO.FileAttributes]($raw -band (-bnot [int][System.IO.FileAttributes]::ReadOnly))
+        return $true
+    }
+    catch {
+        # Item vanished, is ACL-protected, or carries attribute bits PS 5.1 cannot
+        # round-trip. Deliberately silent: the caller logs the resulting skip, and
+        # logging here would double the write volume on pathological directories.
+        $null = $_
+        return $false
+    }
+}
+
 function Remove-SafeDirectory {
     <#
     .SYNOPSIS
@@ -361,6 +409,13 @@ function Remove-SafeDirectory {
                         if ($refreshed.Exists -and -not $refreshed.Attributes.HasFlag([System.IO.FileAttributes]::ReparsePoint)) {
                             $remaining = @($refreshed.EnumerateFileSystemInfos())
                             if ($remaining.Count -eq 0) {
+                                # A read-only directory refuses RemoveDirectory with
+                                # "Access denied", surfaced as IOException -- which the
+                                # catch below swallows silently. Clear the bit first.
+                                # Attributes were read one line above, so this is free.
+                                if (([int]$refreshed.Attributes -band [int][System.IO.FileAttributes]::ReadOnly) -ne 0) {
+                                    $null = Clear-ReadOnlyAttribute -Item $refreshed
+                                }
                                 $refreshed.Delete()
                             }
                         }
@@ -386,8 +441,16 @@ function Remove-SafeDirectory {
                     try { $stats.DeletedBytes += $entry.Length } catch { $null = $_ }
                 }
                 else {
+                    $fileLen = 0
                     try {
                         $fileLen = $entry.Length
+                        # Read-only files (every git loose object is one) throw
+                        # UnauthorizedAccessException on Delete. The attribute is already
+                        # in the enumeration data, so testing it costs no syscall, while
+                        # letting the delete throw costs ~0.5 ms per file.
+                        if (([int]$entry.Attributes -band [int][System.IO.FileAttributes]::ReadOnly) -ne 0) {
+                            $null = Clear-ReadOnlyAttribute -Item $entry
+                        }
                         $entry.Delete()
                         $stats.DeletedFiles++
                         $stats.DeletedBytes += $fileLen
@@ -397,8 +460,23 @@ function Remove-SafeDirectory {
                         $stats.SkippedFiles++
                     }
                     catch [System.UnauthorizedAccessException] {
-                        Write-Log "Access denied: $($entry.FullName)"
-                        $stats.SkippedFiles++
+                        # Enumeration attributes are a snapshot and can be stale on a
+                        # directory this large. Re-read once, then retry exactly once.
+                        $retried = $false
+                        $entry.Refresh()
+                        if (Clear-ReadOnlyAttribute -Item $entry) {
+                            try {
+                                $entry.Delete()
+                                $stats.DeletedFiles++
+                                $stats.DeletedBytes += $fileLen
+                                $retried = $true
+                            }
+                            catch { $null = $_ }
+                        }
+                        if (-not $retried) {
+                            Write-Log "Access denied: $($entry.FullName)"
+                            $stats.SkippedFiles++
+                        }
                     }
                     catch {
                         Write-Log "Could not delete: $($entry.FullName) - $($_.Exception.Message)"
@@ -504,6 +582,12 @@ function Remove-CleanupItem {
 
         try {
             $len = $fileInfo.Length
+            # Same read-only guard as Remove-SafeDirectory. No stale-attribute retry is
+            # needed here: Test-IsCloudPlaceholder read this object's attributes
+            # microseconds ago, so the cached value is current.
+            if (([int]$fileInfo.Attributes -band [int][System.IO.FileAttributes]::ReadOnly) -ne 0) {
+                $null = Clear-ReadOnlyAttribute -Item $fileInfo
+            }
             $fileInfo.Delete()
             $stats.DeletedFiles = 1
             $stats.DeletedBytes = $len

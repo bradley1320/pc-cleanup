@@ -490,3 +490,118 @@ Describe 'Initialize-AllowedCleanupRoots' {
         $script:AllowedCleanupRoots | Should -Contain $wuResolved
     }
 }
+
+Describe 'Clear-ReadOnlyAttribute' {
+    BeforeEach {
+        Mock -CommandName Write-Host -MockWith {}
+        Mock -CommandName Write-Log -MockWith {}
+    }
+
+    It 'should return $false and leave a writable file unchanged' {
+        $file = Join-Path $TestDrive 'writable.tmp'
+        Set-Content -Path $file -Value 'data'
+        Clear-ReadOnlyAttribute -Item ([System.IO.FileInfo]::new($file)) | Should -BeFalse
+        ([int](Get-Item $file).Attributes -band [int][System.IO.FileAttributes]::ReadOnly) | Should -Be 0
+    }
+
+    It 'should return $true and clear the ReadOnly bit on a read-only file' {
+        $file = Join-Path $TestDrive 'readonly.tmp'
+        Set-Content -Path $file -Value 'data'
+        (Get-Item $file).Attributes = 'ReadOnly'
+        Clear-ReadOnlyAttribute -Item ([System.IO.FileInfo]::new($file)) | Should -BeTrue
+        ([int](Get-Item $file).Attributes -band [int][System.IO.FileAttributes]::ReadOnly) | Should -Be 0
+    }
+
+    It 'should return $false without throwing for an item that no longer exists' {
+        $ghost = [System.IO.FileInfo]::new((Join-Path $TestDrive 'ghost.tmp'))
+        { Clear-ReadOnlyAttribute -Item $ghost } | Should -Not -Throw
+        Clear-ReadOnlyAttribute -Item $ghost | Should -BeFalse
+    }
+}
+
+Describe 'Remove-SafeDirectory: read-only files (git loose objects)' {
+    BeforeEach {
+        Mock -CommandName Write-Host -MockWith {}
+        Mock -CommandName Write-Log -MockWith {}
+        $script:AllowedCleanupRoots = @([System.IO.Path]::GetFullPath($TestDrive))
+        $script:DynamicBrowserRoots = @()
+    }
+
+    It 'should delete a read-only file instead of skipping it' {
+        # Regression: git marks every loose object read-only. FileInfo.Delete()
+        # throws UnauthorizedAccessException on those, so a single abandoned repo
+        # under %TEMP% left 187,738 files behind on a real run.
+        $dir = Join-Path $TestDrive 'ro_single'
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        $f = Join-Path $dir 'loose.obj'
+        Set-Content -Path $f -Value 'x'
+        (Get-Item $f).Attributes = 'ReadOnly'
+
+        $result = Remove-SafeDirectory -Path $dir
+        $result.DeletedFiles | Should -Be 1
+        $result.SkippedFiles | Should -Be 0
+        $result.Errors | Should -Be 0
+        Test-Path $f | Should -BeFalse
+    }
+
+    It 'should delete read-only files nested in subdirectories' {
+        $dir = Join-Path $TestDrive 'ro_nested'
+        foreach ($sub in @('aa', 'bb', 'cc')) {
+            $subPath = Join-Path (Join-Path $dir 'objects') $sub
+            New-Item -ItemType Directory -Path $subPath -Force | Out-Null
+            foreach ($n in 1..3) {
+                $p = Join-Path $subPath "obj$n"
+                Set-Content -Path $p -Value 'x'
+                (Get-Item $p).Attributes = 'ReadOnly'
+            }
+        }
+
+        $result = Remove-SafeDirectory -Path $dir
+        $result.DeletedFiles | Should -Be 9
+        $result.SkippedFiles | Should -Be 0
+        @(Get-ChildItem -Path $dir -Recurse -File -Force -ErrorAction SilentlyContinue).Count | Should -Be 0
+    }
+
+    It 'should not write a log line for every read-only file' {
+        # Regression: the pre-fix code logged one full path per skipped file,
+        # producing a 27.5 MB session log from a single cleanup run.
+        $dir = Join-Path $TestDrive 'ro_nolog'
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        foreach ($n in 1..10) {
+            $p = Join-Path $dir "obj$n"
+            Set-Content -Path $p -Value 'x'
+            (Get-Item $p).Attributes = 'ReadOnly'
+        }
+
+        $result = Remove-SafeDirectory -Path $dir
+        $result.DeletedFiles | Should -Be 10
+        Should -Invoke Write-Log -Times 0 -Exactly
+    }
+
+    It 'should remove an emptied read-only subdirectory' {
+        # A read-only directory throws IOException from DirectoryInfo.Delete(),
+        # which the "not empty or locked" catch swallowed silently -- which is
+        # why the incident reported 0 errors.
+        $dir = Join-Path $TestDrive 'ro_dir_parent'
+        $sub = Join-Path $dir 'ro_child'
+        New-Item -ItemType Directory -Path $sub -Force | Out-Null
+        Set-Content -Path (Join-Path $sub 'f.tmp') -Value 'x'
+        (Get-Item $sub).Attributes = 'ReadOnly, Directory'
+
+        $null = Remove-SafeDirectory -Path $dir
+        Test-Path $sub | Should -BeFalse
+    }
+
+    It 'WhatIf must not clear the ReadOnly attribute or delete anything' {
+        $dir = Join-Path $TestDrive 'ro_whatif'
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        $f = Join-Path $dir 'obj'
+        Set-Content -Path $f -Value 'x'
+        (Get-Item $f).Attributes = 'ReadOnly'
+
+        $result = Remove-SafeDirectory -Path $dir -WhatIf
+        $result.DeletedFiles | Should -Be 1
+        Test-Path $f | Should -BeTrue
+        ([int](Get-Item $f).Attributes -band [int][System.IO.FileAttributes]::ReadOnly) | Should -Not -Be 0
+    }
+}

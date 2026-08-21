@@ -302,7 +302,7 @@ function Invoke-MenuLoop {
 
         switch ($selection) {
             'QuickClean' {
-                $targets = Get-CleanupTargets -ShowProgress
+                $targets = @(Get-CleanupTargets -ShowProgress)
                 if ($targets.Count -gt 0) {
                     # Build selection items
                     $selItems = @()
@@ -319,10 +319,10 @@ function Invoke-MenuLoop {
                             Target      = $target
                         }
                     }
-                    $selected = Show-SelectionMenu -Title 'Select cleanup targets:' -Items $selItems
+                    $selected = @(Show-SelectionMenu -Title 'Select cleanup targets:' -Items $selItems)
                     if ($selected.Count -gt 0) {
                         $selectedTargets = @($selected | ForEach-Object { $_.Target })
-                        Invoke-Cleanup -Targets $selectedTargets -WhatIf:$WhatIf
+                        $null = Invoke-Cleanup -Targets $selectedTargets -WhatIf:$WhatIf
                     }
                     else {
                         Write-Info 'No targets selected.'
