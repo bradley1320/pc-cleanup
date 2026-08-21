@@ -11,14 +11,14 @@ They are NOT part of CI — run manually before releases.
 
 ## Test Checklist
 
-- [ ] Full Tune-Up completes without errors
-- [ ] System Restore Point created
-- [ ] Registry backup created
-- [ ] Privacy tweaks apply and undo correctly
-- [ ] Performance tweaks apply and undo correctly
-- [ ] QuickClean preview shows correct sizes
-- [ ] Startup Manager lists programs with publisher info
-- [ ] Security Check reports correct status
-- [ ] System Report captures before/after snapshots
-- [ ] Network Reset displays appropriate warnings
-- [ ] CLI flags (-Profile, -WhatIf, -Undo) work correctly
+- [x] Full Tune-Up completes without errors
+- [x] System Restore Point created
+- [x] Registry backup created
+- [x] Privacy tweaks apply and undo correctly
+- [x] Performance tweaks apply and undo correctly
+- [x] QuickClean preview shows correct sizes
+- [x] Startup Manager lists programs with publisher info
+- [x] Security Check reports correct status
+- [x] System Report captures before/after snapshots
+- [x] Network Reset displays appropriate warnings
+- [x] CLI flags (-Profile, -WhatIf, -Undo) work correctly
