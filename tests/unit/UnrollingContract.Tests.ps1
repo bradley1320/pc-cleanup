@@ -15,7 +15,10 @@
 # CLIParsing.Tests.ps1 and FullTuneUp.Tests.ps1.
 # ==============================================================================
 
-Describe 'PS 5.1 unrolling: language behaviour' {
+# The unrolling trap is specific to Windows PowerShell 5.1. PowerShell 6+ added a
+# .Count of 1 to scalars, so these assertions are inverted there and the Describe
+# is skipped. The source-contract test below is version-independent and always runs.
+Describe 'PS 5.1 unrolling: language behaviour' -Skip:($PSVersionTable.PSVersion.Major -ge 6) {
     It 'confirms a one-item return unrolls and loses .Count' {
         function Test-ReturnsOne { return @([PSCustomObject]@{ N = 1 }) }
         $unwrapped = Test-ReturnsOne

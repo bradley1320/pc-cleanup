@@ -21,7 +21,12 @@ jobs:
       - name: Install Pester 5.x
         shell: pwsh
         run: |
-          Install-Module -Name Pester -Force -Scope CurrentUser -MinimumVersion 5.0.0
+          # Pin to 5.x. -MinimumVersion alone installs the newest available, which
+          # silently became Pester 6 -- and Pester 6 throws on an unmatched mock
+          # instead of falling through, breaking mocks this suite relies on.
+          Install-Module -Name Pester -Force -Scope CurrentUser -MinimumVersion 5.0.0 -MaximumVersion 5.99.99
+          Import-Module Pester -MinimumVersion 5.0.0 -MaximumVersion 5.99.99
+          Write-Host "Pester $((Get-Module Pester).Version) / PowerShell $($PSVersionTable.PSVersion)"
 
       - name: Run PSScriptAnalyzer
         shell: pwsh
@@ -36,6 +41,10 @@ jobs:
       - name: Run Pester Tests
         shell: pwsh
         run: |
+          # Explicit import: without it New-PesterConfiguration auto-loads the
+          # highest installed version, which on a hosted runner can be Pester 6.
+          Import-Module Pester -MinimumVersion 5.0.0 -MaximumVersion 5.99.99
+          Write-Host "Pester $((Get-Module Pester).Version) / PowerShell $($PSVersionTable.PSVersion)"
           $config = New-PesterConfiguration
           $config.Run.Path = 'tests/unit'
           $config.Run.Exit = $true
