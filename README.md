@@ -8,12 +8,14 @@ It cleans junk files, tunes performance settings, reins in Windows telemetry, ch
 
 ## Quick Start
 
-1. Download the latest release ZIP from [Releases](https://github.com/bradley1320/pc-cleanup/releases)
+1. Download `pc-cleanup-v2.zip` from [Releases](https://github.com/bradley1320/pc-cleanup/releases)
 2. **Right-click the ZIP > Properties > check "Unblock" > OK** (this is mandatory -- Windows blocks unsigned scripts without it)
 3. Extract the ZIP
 4. Right-click `Run.bat` > **Run as Administrator**
 
 That's it. No installer, no dependencies, no internet connection needed.
+
+> **Use the release ZIP, not the green "Code > Download ZIP" button.** That button gives you the source code, which does not include the compiled `pccleanup.ps1`. (If you did grab the source, its `Run.bat` will build the script from `src/` for you -- it just takes a moment longer and you'll see build output first.)
 
 ## Requirements
 
@@ -126,6 +128,15 @@ Windows Defender's AMSI (Antimalware Scan Interface) sometimes flags PowerShell 
 2. Scroll to Exclusions > Add or remove exclusions
 3. Add the folder where you extracted PC Cleanup
 
+### "The argument 'PCCleanup.ps1' to the -File parameter does not exist"
+
+You downloaded the source code (green "Code > Download ZIP" button, or `git clone`) from before the launcher was fixed, rather than the release ZIP. The compiled script is not stored in the repository. Fix it any of three ways: download `pc-cleanup-v2.zip` from [Releases](https://github.com/bradley1320/pc-cleanup/releases), re-download the current source (its `Run.bat` now builds the script for you), or build it yourself and then right-click `dist\Run.bat` > **Run as Administrator**:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\build\Build.ps1
+```
+
 ### "Running scripts is disabled on this system"
 
 `Run.bat` already handles this with `-ExecutionPolicy Bypass`. If you're running `pccleanup.ps1` directly instead, set the policy for your session first:
@@ -204,7 +215,7 @@ Ground-up rewrite. Same philosophy, completely new architecture:
 - **System Report** -- before/after metrics with accurate boot time measurement
 - **Disk Analysis** -- drive usage bars and recursive folder size breakdown
 - **Network Reset** -- deliberately isolated from the optimization flow with heavy warnings
-- **470+ unit tests** -- Pester 5, fully mocked, no admin privileges needed to run them
+- **518 unit tests** -- Pester 5, fully mocked, no admin privileges needed to run them
 - **Clean lint** -- 0 PSScriptAnalyzer warnings
 - **CI/CD** -- GitHub Actions running lint, tests, and build on every push
 
