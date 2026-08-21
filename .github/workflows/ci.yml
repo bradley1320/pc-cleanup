@@ -1,5 +1,10 @@
 name: CI
 
+# Two jobs rather than a matrix: GitHub Actions does not allow expressions in a
+# step's "shell:" key, and jobs.<job_id>.defaults.run.shell forbids contexts
+# outright, so the shell cannot be selected per matrix leg. The actual work lives
+# in build/ci/Invoke-CIStage.ps1 so the two legs cannot drift apart.
+
 on:
   push:
     branches: ['**']
@@ -7,70 +12,72 @@ on:
     branches: [main]
 
 jobs:
-  lint-and-test:
+  # Windows PowerShell 5.1 is the runtime users actually get: Run.bat invokes
+  # powershell.exe, and 5.1 is what ships with Windows 10/11. Several of its
+  # behaviours differ from PowerShell 7 in ways that have already caused real
+  # defects here -- a one-item collection unrolls to a scalar with no .Count, and
+  # ConvertFrom-Json emits a JSON array as a single pipeline object. Neither
+  # reproduces under pwsh, so this is the leg that guards the shipped experience.
+  windows-powershell-51:
+    name: lint-and-test (Windows PowerShell 5.1)
     runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install PSScriptAnalyzer
-        shell: pwsh
-        run: |
-          Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+      - name: Install modules
+        shell: powershell
+        run: .\build\ci\Invoke-CIStage.ps1 -Stage Install
 
-      - name: Install Pester 5.x
+      - name: Run PSScriptAnalyzer
+        shell: powershell
+        run: .\build\ci\Invoke-CIStage.ps1 -Stage Lint
+
+      - name: Run Pester Tests
+        shell: powershell
+        run: .\build\ci\Invoke-CIStage.ps1 -Stage Test
+
+      - name: Run Build
+        shell: powershell
+        run: .\build\ci\Invoke-CIStage.ps1 -Stage Build
+
+      - name: Verify config files copied
+        shell: powershell
+        run: .\build\ci\Invoke-CIStage.ps1 -Stage VerifyConfig
+
+      - name: Verify source is pure ASCII
+        shell: powershell
+        run: .\build\ci\Invoke-CIStage.ps1 -Stage VerifyAscii
+
+  # PowerShell 7 is not a target runtime. It runs anyway to catch accidental
+  # 5.1-only syntax and to keep forward compatibility honest.
+  powershell-7:
+    name: lint-and-test (PowerShell 7)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install modules
         shell: pwsh
-        run: |
-          # Pin to 5.x. -MinimumVersion alone installs the newest available, which
-          # silently became Pester 6 -- and Pester 6 throws on an unmatched mock
-          # instead of falling through, breaking mocks this suite relies on.
-          Install-Module -Name Pester -Force -Scope CurrentUser -MinimumVersion 5.0.0 -MaximumVersion 5.99.99
-          Import-Module Pester -MinimumVersion 5.0.0 -MaximumVersion 5.99.99
-          Write-Host "Pester $((Get-Module Pester).Version) / PowerShell $($PSVersionTable.PSVersion)"
+        run: ./build/ci/Invoke-CIStage.ps1 -Stage Install
 
       - name: Run PSScriptAnalyzer
         shell: pwsh
-        run: |
-          $results = Invoke-ScriptAnalyzer -Path src/ -Recurse -Severity Warning,Error -Settings .psscriptanalyzerrc.psd1
-          if ($results) {
-              $results | Format-Table -AutoSize
-              throw "PSScriptAnalyzer found $($results.Count) issue(s)."
-          }
-          Write-Host "PSScriptAnalyzer: all clear." -ForegroundColor Green
+        run: ./build/ci/Invoke-CIStage.ps1 -Stage Lint
 
       - name: Run Pester Tests
         shell: pwsh
-        run: |
-          # Explicit import: without it New-PesterConfiguration auto-loads the
-          # highest installed version, which on a hosted runner can be Pester 6.
-          Import-Module Pester -MinimumVersion 5.0.0 -MaximumVersion 5.99.99
-          Write-Host "Pester $((Get-Module Pester).Version) / PowerShell $($PSVersionTable.PSVersion)"
-          $config = New-PesterConfiguration
-          $config.Run.Path = 'tests/unit'
-          $config.Run.Exit = $true
-          $config.Output.Verbosity = 'Detailed'
-          $config.TestResult.Enabled = $true
-          $config.TestResult.OutputPath = 'test-results.xml'
-          Invoke-Pester -Configuration $config
+        run: ./build/ci/Invoke-CIStage.ps1 -Stage Test
 
       - name: Run Build
         shell: pwsh
-        run: |
-          & build/Build.ps1
-          if (-not (Test-Path dist/pccleanup.ps1)) {
-              throw "Build.ps1 did not produce dist/pccleanup.ps1"
-          }
-          $lineCount = (Get-Content dist/pccleanup.ps1).Count
-          Write-Host "Build produced $lineCount lines." -ForegroundColor Green
+        run: ./build/ci/Invoke-CIStage.ps1 -Stage Build
 
       - name: Verify config files copied
         shell: pwsh
-        run: |
-          $configs = @('tweaks.json', 'apps-bloat.json', 'apps-critical.json', 'profiles.json')
-          foreach ($cfg in $configs) {
-              $path = "dist/config/$cfg"
-              if (-not (Test-Path $path)) {
-                  throw "Build did not copy $cfg to dist/config/"
-              }
-          }
-          Write-Host "All config files present in dist/." -ForegroundColor Green
+        run: ./build/ci/Invoke-CIStage.ps1 -Stage VerifyConfig
+
+      - name: Verify source is pure ASCII
+        shell: pwsh
+        run: ./build/ci/Invoke-CIStage.ps1 -Stage VerifyAscii
