@@ -1,10 +1,8 @@
 # PC Cleanup v2
 
-> A Windows optimizer that doesn't hide what it's doing.
+> A Windows optimizer.
 
-Most Windows "optimization" tools are black boxes. You run them, stuff happens, and you hope for the best. PC Cleanup is the opposite -- it shows you what it's going to change before it changes anything, and it can put back any tweak afterwards, exactly the way you had it.
-
-It cleans junk files, tunes performance settings, reins in Windows telemetry, checks your security posture, and gives you before/after metrics so you can see if it actually did anything.
+It cleans junk files, tunes performance settings, reins in Windows telemetry, checks your security posture, and gives you before/after metrics so you can see if it actually did anything. Every tweak can be undone, one at a time.
 
 ## Quick Start
 
@@ -90,17 +88,6 @@ When you undo a tweak, it doesn't just slam in some generic default. It saved wh
 - Undo everything: menu option 10 > Undo All, or `.\pccleanup.ps1 -Undo All`
 - Nuclear option: use System Restore to roll back to the restore point Full Tune-Up created
 
-## Is This Safe?
-
-Don't trust me -- check it yourself. You don't have to read the code to do it:
-
-- **Preview first.** Run `.\pccleanup.ps1 -WhatIf` and use it like normal. It tells you each tweak it would apply and everything it would clean, without changing a single setting or deleting anything.
-- **Every tweak is on one short list.** All 29 live in `config/tweaks.json`, each with a plain-English description, the exact registry keys, services, scheduled tasks, or commands it uses, and a link to Microsoft's docs.
-- **Nothing risky by default.** Only safe-tier tweaks run unless you opt in to moderate or advanced ones.
-- **Any tweak can be undone on its own.** Undo puts back what your PC actually had before -- not a generic default.
-
-The code is open source, 500+ automated tests run on every change, and the security reviews are in [docs/audits](docs/audits).
-
 ## What This Tool Does NOT Do
 
 There's a whole category of "optimization" advice floating around that ranges from useless to actively harmful. Here's what PC Cleanup deliberately skips, and why:
@@ -115,7 +102,7 @@ There's a whole category of "optimization" advice floating around that ranges fr
 - **Disabling SysMain/SuperFetch** -- Another persistent myth, especially for SSD users. SysMain pre-loads frequently used DLLs into standby memory with essentially zero I/O cost on an SSD. Disabling it increases page faults.
 - **Removing UWP/Appx packages** -- On Windows 11 24H2, removing certain packages breaks File Explorer (dark mode, tabs, XAML stuff). And once you remove a system package, getting it back is a nightmare. We're not touching this.
 - **App installation** -- Not our lane. [WinUtil](https://github.com/ChrisTitusTech/winutil) does this really well already.
-- **GUI** -- One script with no dependencies is the point. A graphical interface would mean a UI framework and a lot more code to trust. The tool is a script on purpose.
+- **GUI** -- One script with nothing to install is the point. The tool is a script on purpose.
 
 ## Troubleshooting
 
