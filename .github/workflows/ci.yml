@@ -49,6 +49,10 @@ jobs:
         shell: powershell
         run: .\build\ci\Invoke-CIStage.ps1 -Stage VerifyAscii
 
+      - name: Verify compiled script and release zip
+        shell: powershell
+        run: .\build\ci\Invoke-CIStage.ps1 -Stage VerifyDist
+
   # PowerShell 7 is not a target runtime. It runs anyway to catch accidental
   # 5.1-only syntax and to keep forward compatibility honest.
   powershell-7:
@@ -81,3 +85,7 @@ jobs:
       - name: Verify source is pure ASCII
         shell: pwsh
         run: ./build/ci/Invoke-CIStage.ps1 -Stage VerifyAscii
+
+      - name: Verify compiled script and release zip
+        shell: pwsh
+        run: ./build/ci/Invoke-CIStage.ps1 -Stage VerifyDist

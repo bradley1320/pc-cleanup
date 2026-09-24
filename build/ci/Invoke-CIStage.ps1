@@ -14,7 +14,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)]
-    [ValidateSet('Install', 'Lint', 'Test', 'Build', 'VerifyConfig', 'VerifyAscii')]
+    [ValidateSet('Install', 'Lint', 'Test', 'Build', 'VerifyConfig', 'VerifyAscii', 'VerifyDist')]
     [string]$Stage
 )
 
@@ -84,7 +84,7 @@ try {
         }
 
         'Build' {
-            & build/Build.ps1
+            & build/Build.ps1 -Package
             if (-not (Test-Path dist/pccleanup.ps1)) {
                 throw 'Build.ps1 did not produce dist/pccleanup.ps1'
             }
@@ -120,6 +120,71 @@ try {
                 throw "Found non-ASCII bytes in $($bad.Count) source file(s)."
             }
             Write-Host 'Source is pure ASCII.' -ForegroundColor Green
+        }
+
+        'VerifyDist' {
+            # dist/pccleanup.ps1 is produced by text surgery on src/ -- the param
+            # block is hoisted, DIST_EXCLUDE regions are dropped and config hashes
+            # are spliced in -- so a clean src/ does not prove a runnable build.
+            # These checks run against the artifact users actually download.
+            $tokens = $null
+            $parseErrors = $null
+            $ast = [System.Management.Automation.Language.Parser]::ParseFile(
+                (Resolve-Path dist/pccleanup.ps1).Path, [ref]$tokens, [ref]$parseErrors)
+            if ($parseErrors) {
+                $parseErrors | ForEach-Object { Write-Host "  line $($_.Extent.StartLineNumber): $($_.Message)" }
+                throw "dist/pccleanup.ps1 has $($parseErrors.Count) parse error(s)."
+            }
+
+            # Concatenation lets a later definition silently replace an earlier one.
+            $dupes = $ast.FindAll({ $args[0] -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $false) |
+                Group-Object Name | Where-Object Count -gt 1
+            if ($dupes) {
+                throw "Functions defined more than once in dist/pccleanup.ps1: $(@($dupes.Name) -join ', ')"
+            }
+
+            # Test-ConfigIntegrity treats an empty hash table as dev mode and skips
+            # the check, so if Build.ps1's splice ever stopped matching, a release
+            # would ship with tamper detection silently switched off.
+            foreach ($cfg in @('tweaks.json', 'apps-bloat.json', 'apps-critical.json', 'profiles.json')) {
+                $hash = (Get-FileHash -Path "dist/config/$cfg" -Algorithm SHA256).Hash
+                if (-not (Select-String -Path dist/pccleanup.ps1 -SimpleMatch -Pattern "'$cfg' = '$hash'" -Quiet)) {
+                    throw "dist/pccleanup.ps1 does not embed the SHA-256 of dist/config/$cfg."
+                }
+            }
+
+            # VerifyAscii covers src/, but the build header and the launcher ship too.
+            foreach ($file in @('dist/pccleanup.ps1', 'dist/Run.bat')) {
+                $bytes = [System.IO.File]::ReadAllBytes((Resolve-Path $file).Path)
+                # Windows PowerShell writes a UTF-8 BOM, which helps 5.1 detect the encoding.
+                $start = 0
+                if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+                    $start = 3
+                }
+                for ($i = $start; $i -lt $bytes.Length; $i++) {
+                    if ($bytes[$i] -gt 127) {
+                        throw ('{0} has a non-ASCII byte at offset {1} (0x{2:X2}).' -f $file, $i, $bytes[$i])
+                    }
+                }
+            }
+
+            Add-Type -AssemblyName System.IO.Compression.FileSystem
+            $zip = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path dist/pc-cleanup-v2.zip).Path)
+            try {
+                $entries = @($zip.Entries | ForEach-Object { $_.FullName })
+            }
+            finally {
+                $zip.Dispose()
+            }
+            $expected = @('pccleanup.ps1', 'Run.bat', 'config/apps-bloat.json', 'config/apps-critical.json',
+                'config/profiles.json', 'config/tweaks.json')
+            $diff = Compare-Object -ReferenceObject $expected -DifferenceObject $entries -CaseSensitive
+            if ($diff) {
+                $diff | Format-Table -AutoSize | Out-String | Write-Host
+                throw 'dist/pc-cleanup-v2.zip does not hold exactly the expected entries.'
+            }
+
+            Write-Host "Compiled script parses, defines each function once, embeds config hashes and is ASCII; zip holds $($entries.Count) expected entries." -ForegroundColor Green
         }
     }
 }

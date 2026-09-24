@@ -6,7 +6,11 @@
 
 [CmdletBinding()]
 param(
-    [string]$Version = (Get-Date -Format 'yy.MM.dd')
+    [string]$Version = (Get-Date -Format 'yy.MM.dd'),
+
+    # Also write dist/pc-cleanup-v2.zip, the release asset. Off by default because
+    # the source-repo Run.bat builds on every launch and has no use for an archive.
+    [switch]$Package
 )
 
 $ErrorActionPreference = 'Stop'
@@ -209,3 +213,39 @@ Write-Host "  [+] Config integrity hashes embedded ($($hashLines.Count) files)" 
 $lineCount = (Get-Content -Path $outputPath).Count
 $fileSize  = (Get-Item -Path $outputPath).Length
 Write-Host "`n  Build complete: $lineCount lines, $([math]::Round($fileSize / 1KB, 1)) KB" -ForegroundColor Green
+
+# --- Release package ---
+# Built here rather than by hand so the published ZIP is exactly this build's
+# output. Entries are listed explicitly instead of zipping dist/ wholesale,
+# because dist/ is never cleaned and can hold stale files from earlier builds.
+# Entry names use forward slashes as the ZIP spec requires; Windows PowerShell
+# 5.1's Compress-Archive writes backslashes, which only Explorer tolerates.
+if ($Package) {
+    Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
+
+    $zipEntries = @('pccleanup.ps1', 'Run.bat')
+    $zipEntries += Get-ChildItem -Path $configPath -Filter '*.json' | Sort-Object Name | ForEach-Object { "config/$($_.Name)" }
+
+    $zipPath = Join-Path $distPath 'pc-cleanup-v2.zip'
+    if (Test-Path $zipPath) {
+        Remove-Item -LiteralPath $zipPath -Force
+    }
+
+    $zip = [System.IO.Compression.ZipFile]::Open($zipPath, [System.IO.Compression.ZipArchiveMode]::Create)
+    try {
+        foreach ($entry in $zipEntries) {
+            $entrySource = Join-Path $distPath $entry
+            if (-not (Test-Path $entrySource)) {
+                throw "Cannot package: $entrySource was not produced by this build."
+            }
+            [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+                $zip, $entrySource, $entry, [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
+        }
+    }
+    finally {
+        $zip.Dispose()
+    }
+
+    $zipSize = (Get-Item -Path $zipPath).Length
+    Write-Host "  Package: $zipPath ($($zipEntries.Count) files, $([math]::Round($zipSize / 1KB, 1)) KB)" -ForegroundColor Green
+}
