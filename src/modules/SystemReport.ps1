@@ -1,7 +1,7 @@
 # ==============================================================================
 # PC Cleanup v2 -- SystemReport.ps1
 # Before/after metrics collection and comparison.
-# Uses Event ID 100 for boot timing with CIM fallback.
+# Boot timing comes only from Event ID 100 -- see Get-BootTimeMeasurement.
 # ==============================================================================
 
 $script:SnapshotDir = Join-Path $env:LOCALAPPDATA 'PCCleanup\snapshots'
@@ -11,9 +11,9 @@ function Get-SystemSnapshot {
     .SYNOPSIS
         Collects a point-in-time system metrics snapshot.
     .DESCRIPTION
-        Captures boot time (Event ID 100 from Diagnostics-Performance log,
-        with CIM_OperatingSystem fallback), process count, free disk space,
-        and startup program count.
+        Captures boot time (Event ID 100 from the Diagnostics-Performance log,
+        or -1 when that cannot be read), process count, free disk space, and
+        startup program count.
     .OUTPUTS
         [PSCustomObject] Snapshot with BootTimeMs, BootTimeSource, ProcessCount,
         FreeDiskBytes, StartupCount, and CapturedAt.
@@ -101,7 +101,7 @@ function Save-SystemSnapshot {
     $snapshot | ConvertTo-Json -Depth 5 | Set-Content -Path $filePath -Encoding UTF8
 
     Write-Success "Snapshot '$Label' saved to $filePath"
-    Write-Info "Boot time: $($snapshot.BootTimeMs)ms (source: $($snapshot.BootTimeSource))"
+    Write-Info "Boot time: $(Format-BootTime -BootTimeMs $snapshot.BootTimeMs -Source $snapshot.BootTimeSource)"
     Write-Info "Processes: $($snapshot.ProcessCount) | Free disk: $(Format-FileSize $snapshot.FreeDiskBytes) | Startup items: $($snapshot.StartupCount)"
 
     return $snapshot
@@ -114,8 +114,8 @@ function Compare-Snapshots {
     .DESCRIPTION
         Loads the most recent 'Before' and 'After' snapshots from the
         snapshot directory. Calculates differences and displays a
-        formatted comparison table. Notes data source differences
-        (Event ID 100 vs WMI) in the output.
+        formatted comparison table. Boot time is compared only when both
+        snapshots measured it from Event ID 100.
     #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns', '', Justification = 'Compares multiple snapshots')]
     [CmdletBinding()]
@@ -160,15 +160,16 @@ function Compare-Snapshots {
     Write-Host "  After:  $($afterFile.Name)" -ForegroundColor DarkGray
     Write-Host ""
 
-    # Boot time comparison
-    Show-MetricDelta -Label 'Boot Time' -Before $before.BootTimeMs -After $after.BootTimeMs -Unit 'ms' -LowerIsBetter $true
-
-    # Boot time source note
-    if ($before.BootTimeSource -ne $after.BootTimeSource) {
-        Write-Host "    Note: Boot time sources differ -- Before: $($before.BootTimeSource), After: $($after.BootTimeSource)" -ForegroundColor Yellow
-        if ($after.BootTimeSource -eq 'CIM') {
-            Write-Host "    (CIM/WMI is less granular -- diagnostic logging may be disabled by privacy tweaks)" -ForegroundColor Yellow
-        }
+    # Boot time is only comparable when both snapshots actually measured it.
+    # Snapshots saved by v2.0.0 hold uptime under the 'CIM' source, and a delta
+    # against uptime reports a speed-up or slow-down that never happened.
+    if ($before.BootTimeSource -eq 'EventID100' -and $after.BootTimeSource -eq 'EventID100') {
+        Show-MetricDelta -Label 'Boot Time' -Before $before.BootTimeMs -After $after.BootTimeMs -Unit 'ms' -LowerIsBetter $true
+    }
+    else {
+        Write-Host ("  {0,-20}not compared" -f 'Boot Time') -ForegroundColor Yellow
+        Write-Host "    Before: $(Format-BootTime -BootTimeMs $before.BootTimeMs -Source $before.BootTimeSource)" -ForegroundColor Yellow
+        Write-Host "    After:  $(Format-BootTime -BootTimeMs $after.BootTimeMs -Source $after.BootTimeSource)" -ForegroundColor Yellow
     }
 
     # Process count
@@ -192,61 +193,92 @@ function Compare-Snapshots {
     }
 }
 
+function Format-BootTime {
+    <#
+    .SYNOPSIS
+        Formats a snapshot's boot time for display.
+    .DESCRIPTION
+        Shows the measured duration with its source, or says plainly that there
+        is no measurement instead of printing the -1 sentinel. Snapshots saved
+        by v2.0.0 carry the 'CIM' source, whose value was uptime, not boot time.
+    .PARAMETER BootTimeMs
+        The BootTimeMs value from a snapshot.
+    .PARAMETER Source
+        The BootTimeSource value from a snapshot.
+    .EXAMPLE
+        Format-BootTime -BootTimeMs 76919 -Source 'EventID100'
+    #>
+    [CmdletBinding()]
+    param(
+        [long]$BootTimeMs,
+        [string]$Source
+    )
+
+    if ($Source -eq 'EventID100' -and $BootTimeMs -ge 0) {
+        "${BootTimeMs}ms (source: Event ID 100)"
+    }
+    elseif ($Source -eq 'CIM') {
+        'not measured (saved by v2.0.0, which recorded uptime instead of boot time)'
+    }
+    else {
+        'not available (Windows boot diagnostics, Event ID 100, could not be read)'
+    }
+}
+
 # --- Internal helper functions ---
 
 function Get-BootTimeMeasurement {
     <#
     .SYNOPSIS
-        Measures boot time using Event ID 100, with CIM fallback.
+        Measures the last boot's duration from Event ID 100.
     .DESCRIPTION
-        Uses Microsoft-Windows-Diagnostics-Performance/Operational Event ID 100
-        for accurate phase-by-phase boot timing (MainPathBootTime + BootPostBootTime).
-        Falls back to LastBootUpTime from CIM_OperatingSystem if event log
-        is unavailable (privacy tweaks may disable diagnostic performance logging).
+        Reads the newest Event ID 100 from the
+        Microsoft-Windows-Diagnostics-Performance/Operational log and returns
+        MainPathBootTime + BootPostBootTime, which Windows itself reports as the
+        boot duration. Fields are read by name from the event XML. Reading them
+        by position is what broke v2.0.0: the event carries 40+ fields and the
+        first two are a version number and a start timestamp, so the cast threw
+        on every real machine.
+
+        When the event cannot be read this returns -1 with source 'Unavailable'.
+        There is deliberately no fallback. CIM_OperatingSystem.LastBootUpTime
+        says when Windows started, not how long starting took, and the uptime it
+        yields made before/after comparisons show speed-ups that never happened.
     .OUTPUTS
         [PSCustomObject] With BootTimeMs and Source properties.
     #>
     [CmdletBinding()]
     param()
 
-    # Try Event ID 100 first (most accurate)
     try {
         $logName = 'Microsoft-Windows-Diagnostics-Performance/Operational'
         $bootEvent = Get-WinEvent -LogName $logName -FilterXPath "*[System[EventID=100]]" -MaxEvents 1 -ErrorAction Stop
 
-        if ($bootEvent -and $bootEvent.Properties.Count -ge 2) {
-            # Property 0 = MainPathBootTime (ms), Property 1 = BootPostBootTime (ms)
-            $mainPathMs = [long]$bootEvent.Properties[0].Value
-            $postBootMs = [long]$bootEvent.Properties[1].Value
-            $totalMs = $mainPathMs + $postBootMs
+        $fields = @{}
+        foreach ($data in ([xml]$bootEvent.ToXml()).Event.EventData.Data) {
+            $fields[$data.Name] = $data.'#text'
+        }
 
+        [long]$mainPathMs = 0
+        [long]$postBootMs = 0
+        if ([long]::TryParse($fields['MainPathBootTime'], [ref]$mainPathMs) -and
+            [long]::TryParse($fields['BootPostBootTime'], [ref]$postBootMs) -and
+            $mainPathMs -gt 0) {
             return [PSCustomObject]@{
-                BootTimeMs = $totalMs
+                BootTimeMs = $mainPathMs + $postBootMs
                 Source     = 'EventID100'
             }
         }
+        Write-Verbose 'Event ID 100 has no usable MainPathBootTime/BootPostBootTime fields.'
     }
     catch {
-        # Event log unavailable -- fallback to CIM
-        $null = $_
+        # No event yet, log disabled, or access denied -- all mean "not measured".
+        Write-Verbose "Event ID 100 unavailable: $($_.Exception.Message)"
     }
 
-    # CIM fallback: time since last boot
-    try {
-        $os = Get-CimInstance -ClassName CIM_OperatingSystem -ErrorAction Stop
-        $uptime = (Get-Date) - $os.LastBootUpTime
-        $uptimeMs = [long]$uptime.TotalMilliseconds
-
-        return [PSCustomObject]@{
-            BootTimeMs = $uptimeMs
-            Source     = 'CIM'
-        }
-    }
-    catch {
-        return [PSCustomObject]@{
-            BootTimeMs = -1
-            Source     = 'Unavailable'
-        }
+    [PSCustomObject]@{
+        BootTimeMs = -1
+        Source     = 'Unavailable'
     }
 }
 

@@ -169,7 +169,7 @@ if ($Report) {
     Write-Host ""
     $snap = Get-SystemSnapshot
     Write-Host "  Current System Metrics:" -ForegroundColor White
-    Write-Host "    Boot time:      $($snap.BootTimeMs)ms (source: $($snap.BootTimeSource))"
+    Write-Host "    Boot time:      $(Format-BootTime -BootTimeMs $snap.BootTimeMs -Source $snap.BootTimeSource)"
     Write-Host "    Processes:      $($snap.ProcessCount)"
     Write-Host "    Free disk:      $(Format-FileSize $snap.FreeDiskBytes)"
     Write-Host "    Startup items:  $($snap.StartupCount)"

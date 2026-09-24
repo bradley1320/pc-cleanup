@@ -408,7 +408,7 @@ function Show-ReportMenu {
             $snapshot = Get-SystemSnapshot
             Write-Host ""
             Write-Host "  Current System Metrics:" -ForegroundColor White
-            Write-Host "    Boot time:      $($snapshot.BootTimeMs)ms (source: $($snapshot.BootTimeSource))"
+            Write-Host "    Boot time:      $(Format-BootTime -BootTimeMs $snapshot.BootTimeMs -Source $snapshot.BootTimeSource)"
             Write-Host "    Processes:      $($snapshot.ProcessCount)"
             Write-Host "    Free disk:      $(Format-FileSize $snapshot.FreeDiskBytes)"
             Write-Host "    Startup items:  $($snapshot.StartupCount)"

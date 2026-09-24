@@ -6,6 +6,40 @@ BeforeAll {
     . "$PSScriptRoot/../../src/core/01-Utility.ps1"
     . "$PSScriptRoot/../../src/core/02-SystemInfo.ps1"
     . "$PSScriptRoot/../../src/modules/SystemReport.ps1"
+
+    # Stand-in for a real Event ID 100 record, in Windows' own field order. The
+    # event has 40+ fields and the first three are a version number and two
+    # timestamps, so code that reads Properties by position fails against it --
+    # which is how v2.0.0 came to report uptime as boot time.
+    function New-BootEvent {
+        param([long]$MainPathMs, [long]$PostBootMs)
+
+        $start = [datetime]'2026-09-22T19:23:38'
+        $fields = [ordered]@{
+            BootTsVersion      = [uint32]2
+            BootStartTime      = $start
+            BootEndTime        = $start.AddMilliseconds($MainPathMs + $PostBootMs)
+            SystemBootInstance = [uint32]155
+            UserBootInstance   = [uint32]154
+            BootTime           = [uint32]($MainPathMs + $PostBootMs)
+            MainPathBootTime   = [uint32]$MainPathMs
+            BootKernelInitTime = [uint32]74
+            BootPostBootTime   = [uint32]$PostBootMs
+        }
+        $data = foreach ($name in $fields.Keys) {
+            $value = $fields[$name]
+            if ($value -is [datetime]) { $value = $value.ToString('o') }
+            "<Data Name='$name'>$value</Data>"
+        }
+        $xml = "<Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'>" +
+            "<System><EventID>100</EventID></System><EventData>$($data -join '')</EventData></Event>"
+
+        $bootEvent = [PSCustomObject]@{
+            Properties = @($fields.Values | ForEach-Object { [PSCustomObject]@{ Value = $_ } })
+        }
+        $bootEvent | Add-Member -MemberType ScriptMethod -Name ToXml -Value { $xml }.GetNewClosure()
+        $bootEvent
+    }
 }
 
 Describe 'Get-BootTimeMeasurement' {
@@ -14,37 +48,51 @@ Describe 'Get-BootTimeMeasurement' {
         Mock -CommandName Write-Log -MockWith {}
     }
 
-    It 'should return Event ID 100 data when available' {
-        Mock -CommandName Get-WinEvent -MockWith {
-            $event = [PSCustomObject]@{
-                Properties = @(
-                    [PSCustomObject]@{ Value = 15000 }
-                    [PSCustomObject]@{ Value = 5000 }
-                )
-            }
-            return $event
-        }
+    It 'should read MainPathBootTime and BootPostBootTime by name from a real-layout event' {
+        Mock -CommandName Get-WinEvent -MockWith { New-BootEvent -MainPathMs 36019 -PostBootMs 40900 }
         $result = Get-BootTimeMeasurement
-        $result.BootTimeMs | Should -Be 20000
+        $result.BootTimeMs | Should -Be 76919
         $result.Source | Should -Be 'EventID100'
     }
 
-    It 'should fall back to CIM when Event ID 100 unavailable' {
-        Mock -CommandName Get-WinEvent -MockWith { throw 'Log not found' }
+    It 'should report Unavailable, not uptime, when Event ID 100 cannot be read' {
+        Mock -CommandName Get-WinEvent -MockWith { throw 'No events were found that match the specified selection criteria.' }
         Mock -CommandName Get-CimInstance -MockWith {
-            [PSCustomObject]@{ LastBootUpTime = (Get-Date).AddMinutes(-30) }
+            [PSCustomObject]@{ LastBootUpTime = (Get-Date).AddHours(-8) }
         }
-        $result = Get-BootTimeMeasurement
-        $result.Source | Should -Be 'CIM'
-        $result.BootTimeMs | Should -BeGreaterThan 0
-    }
-
-    It 'should return Unavailable when both sources fail' {
-        Mock -CommandName Get-WinEvent -MockWith { throw 'Log not found' }
-        Mock -CommandName Get-CimInstance -MockWith { throw 'CIM error' }
         $result = Get-BootTimeMeasurement
         $result.Source | Should -Be 'Unavailable'
         $result.BootTimeMs | Should -Be -1
+        Should -Invoke Get-CimInstance -Times 0 -Exactly
+    }
+
+    It 'should report Unavailable when the event lacks the timing fields' {
+        Mock -CommandName Get-WinEvent -MockWith {
+            $bootEvent = [PSCustomObject]@{}
+            $bootEvent | Add-Member -MemberType ScriptMethod -Name ToXml -Value {
+                "<Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'><EventData><Data Name='BootTsVersion'>2</Data></EventData></Event>"
+            }
+            $bootEvent
+        }
+        $result = Get-BootTimeMeasurement
+        $result.Source | Should -Be 'Unavailable'
+        $result.BootTimeMs | Should -Be -1
+    }
+}
+
+Describe 'Format-BootTime' {
+    It 'should show a measured boot time with its source' {
+        Format-BootTime -BootTimeMs 76919 -Source 'EventID100' | Should -Be '76919ms (source: Event ID 100)'
+    }
+
+    It 'should say that a v2.0.0 CIM snapshot held uptime, not boot time' {
+        Format-BootTime -BootTimeMs 30682830 -Source 'CIM' | Should -BeLike '*uptime*'
+    }
+
+    It 'should say not available instead of printing the -1 sentinel' {
+        $text = Format-BootTime -BootTimeMs -1 -Source 'Unavailable'
+        $text | Should -BeLike 'not available*'
+        $text | Should -Not -BeLike '*-1*'
     }
 }
 
@@ -52,14 +100,13 @@ Describe 'Get-SystemSnapshot' {
     BeforeEach {
         Mock -CommandName Write-Host -MockWith {}
         Mock -CommandName Write-Log -MockWith {}
-        Mock -CommandName Get-WinEvent -MockWith {
-            [PSCustomObject]@{
-                Properties = @(
-                    [PSCustomObject]@{ Value = 10000 }
-                    [PSCustomObject]@{ Value = 3000 }
-                )
-            }
-        }
+        Mock -CommandName Get-WinEvent -MockWith { New-BootEvent -MainPathMs 10000 -PostBootMs 3000 }
+    }
+
+    It 'should record boot time from Event ID 100' {
+        $result = Get-SystemSnapshot
+        $result.BootTimeMs | Should -Be 13000
+        $result.BootTimeSource | Should -Be 'EventID100'
     }
 
     It 'should return snapshot with all required properties' {
@@ -93,14 +140,7 @@ Describe 'Save-SystemSnapshot' {
     BeforeEach {
         Mock -CommandName Write-Host -MockWith {}
         Mock -CommandName Write-Log -MockWith {}
-        Mock -CommandName Get-WinEvent -MockWith {
-            [PSCustomObject]@{
-                Properties = @(
-                    [PSCustomObject]@{ Value = 10000 }
-                    [PSCustomObject]@{ Value = 3000 }
-                )
-            }
-        }
+        Mock -CommandName Get-WinEvent -MockWith { New-BootEvent -MainPathMs 10000 -PostBootMs 3000 }
         $script:SnapshotDir = Join-Path $TestDrive "snapshots_$(Get-Random)"
     }
 
@@ -140,6 +180,7 @@ Describe 'Compare-Snapshots' {
     BeforeEach {
         Mock -CommandName Write-Host -MockWith {}
         Mock -CommandName Write-Log -MockWith {}
+        Mock -CommandName Show-MetricDelta -MockWith {}
         $script:SnapshotDir = Join-Path $TestDrive "snapshots_$(Get-Random)"
         New-Item -ItemType Directory -Path $script:SnapshotDir -Force | Out-Null
     }
@@ -168,22 +209,36 @@ Describe 'Compare-Snapshots' {
         $result.After | Should -Not -BeNullOrEmpty
     }
 
-    It 'should note when boot time sources differ' {
+    It 'should compare boot time when both snapshots measured it' {
         $before = @{ BootTimeMs = 20000; BootTimeSource = 'EventID100'; ProcessCount = 150; FreeDiskBytes = 50000000000; StartupCount = 15; CapturedAt = (Get-Date).AddHours(-2).ToString('o') }
-        $after = @{ BootTimeMs = 15000; BootTimeSource = 'CIM'; ProcessCount = 120; FreeDiskBytes = 55000000000; StartupCount = 10; CapturedAt = (Get-Date).ToString('o') }
+        $after = @{ BootTimeMs = 15000; BootTimeSource = 'EventID100'; ProcessCount = 120; FreeDiskBytes = 55000000000; StartupCount = 10; CapturedAt = (Get-Date).ToString('o') }
         $before | ConvertTo-Json | Set-Content (Join-Path $script:SnapshotDir 'snapshot_Before_20260224_100000.json')
         $after | ConvertTo-Json | Set-Content (Join-Path $script:SnapshotDir 'snapshot_After_20260224_120000.json')
         Compare-Snapshots
-        Should -Invoke Write-Host -ParameterFilter { $Object -like '*sources differ*' }
+        Should -Invoke Show-MetricDelta -Times 1 -Exactly -ParameterFilter { $Label -eq 'Boot Time' -and $Before -eq 20000 -and $After -eq 15000 }
     }
 
-    It 'should warn about CIM being less granular when privacy tweaks disable logging' {
+    It 'should not compare boot time when a snapshot did not measure it' {
         $before = @{ BootTimeMs = 20000; BootTimeSource = 'EventID100'; ProcessCount = 150; FreeDiskBytes = 50000000000; StartupCount = 15; CapturedAt = (Get-Date).AddHours(-2).ToString('o') }
-        $after = @{ BootTimeMs = 15000; BootTimeSource = 'CIM'; ProcessCount = 120; FreeDiskBytes = 55000000000; StartupCount = 10; CapturedAt = (Get-Date).ToString('o') }
+        $after = @{ BootTimeMs = -1; BootTimeSource = 'Unavailable'; ProcessCount = 120; FreeDiskBytes = 55000000000; StartupCount = 10; CapturedAt = (Get-Date).ToString('o') }
         $before | ConvertTo-Json | Set-Content (Join-Path $script:SnapshotDir 'snapshot_Before_20260224_100000.json')
         $after | ConvertTo-Json | Set-Content (Join-Path $script:SnapshotDir 'snapshot_After_20260224_120000.json')
         Compare-Snapshots
-        Should -Invoke Write-Host -ParameterFilter { $Object -like '*diagnostic logging may be disabled*' }
+        Should -Invoke Show-MetricDelta -Times 0 -Exactly -ParameterFilter { $Label -eq 'Boot Time' }
+        Should -Invoke Write-Host -ParameterFilter { $Object -like '*not compared*' }
+        Should -Invoke Write-Host -ParameterFilter { $Object -like '*not available*' }
+    }
+
+    It 'should not compare boot time against a v2.0.0 snapshot that recorded uptime' {
+        # v2.0.0 saved uptime under the CIM source: hours before a reboot,
+        # minutes after, so a delta would show a speed-up that never happened.
+        $before = @{ BootTimeMs = 30682830; BootTimeSource = 'CIM'; ProcessCount = 150; FreeDiskBytes = 50000000000; StartupCount = 15; CapturedAt = (Get-Date).AddHours(-2).ToString('o') }
+        $after = @{ BootTimeMs = 76919; BootTimeSource = 'EventID100'; ProcessCount = 120; FreeDiskBytes = 55000000000; StartupCount = 10; CapturedAt = (Get-Date).ToString('o') }
+        $before | ConvertTo-Json | Set-Content (Join-Path $script:SnapshotDir 'snapshot_Before_20260224_100000.json')
+        $after | ConvertTo-Json | Set-Content (Join-Path $script:SnapshotDir 'snapshot_After_20260224_120000.json')
+        Compare-Snapshots
+        Should -Invoke Show-MetricDelta -Times 0 -Exactly -ParameterFilter { $Label -eq 'Boot Time' }
+        Should -Invoke Write-Host -ParameterFilter { $Object -like '*uptime*' }
     }
 }
 

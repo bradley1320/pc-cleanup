@@ -151,9 +151,9 @@ Visual effects and taskbar tweaks sometimes need Explorer to restart before they
 
 ### Boot time didn't improve after Full Tune-Up
 
-Give it two reboots. The first boot after making changes is almost always slower than normal (Windows is reconfiguring things). Take your "after" snapshot on the second clean boot for an accurate comparison.
+Give it two reboots. The first boot after making changes is almost always slower than normal (Windows is reconfiguring things). Take your "after" snapshot on the second clean boot for an accurate comparison, and wait a couple of minutes after logging in -- Windows records how long a boot took only once that boot has fully settled.
 
-The boot time measurement uses Event ID 100 from Windows diagnostics when available, with a WMI fallback. If your privacy tweaks disabled diagnostic logging, the fallback measurement is less granular -- the tool will tell you which source it's using.
+Boot time comes from Windows' own boot diagnostics (Event ID 100 in the Diagnostics-Performance log). If that record can't be read, the tool says "not available" rather than guessing. Snapshots taken with v2.0.0 recorded uptime instead of boot time, so they are never compared on boot time.
 
 ## Project Structure
 
@@ -206,11 +206,12 @@ Invoke-Pester -Configuration $c
 
 Bug fixes. If you're on v2.0.0, replace it with this release -- your undo history carries over, since the undo system and every config file are unchanged.
 
+- **Boot time was really uptime** -- the System Report read the wrong fields from Windows' boot record, failed silently, and fell back to how long the PC had been switched on. Every "boot time" v2.0.0 showed was uptime, so a before/after comparison could show a dramatic speed-up that never happened. It now reads the real measurement (Event ID 100), says "not available" when there isn't one, and won't compare against snapshots saved by v2.0.0.
 - **Quick Clean ignored a single target** -- picking exactly one cleanup target in the menu said "No targets selected." and cleaned nothing. `-Profile` and `-Module QuickClean` had the same bug whenever the scan found only one target.
 - **Read-only files were never deleted** -- Git marks every object it stores as read-only, so abandoned repos in Temp were skipped wholesale. One real run left 188,000 files behind while reporting zero errors. They are now deleted, after the same allowlist and junction checks as everything else.
 - **Stray output** -- a raw summary table no longer prints after a cleanup.
 - **Launcher** -- `Run.bat` no longer loads your PowerShell profile, passes command-line arguments through, and tells you what to do if antivirus has quarantined the script. The source-code download's `Run.bat` now builds the script instead of failing.
-- **529 unit tests**, now run under Windows PowerShell 5.1 -- the version `Run.bat` actually uses -- as well as PowerShell 7.
+- **534 unit tests**, now run under Windows PowerShell 5.1 -- the version `Run.bat` actually uses -- as well as PowerShell 7.
 
 ### v2.0 (2026)
 
