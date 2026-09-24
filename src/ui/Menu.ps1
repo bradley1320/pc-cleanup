@@ -17,7 +17,7 @@ function Show-Banner {
     Write-Host "     Windows Optimization Toolkit                      " -ForegroundColor DarkGray
     Write-Host "  ====================================================" -ForegroundColor DarkCyan
     Write-Host ""
-    Write-Host "  Open source | Every change is reversible" -ForegroundColor DarkGray
+    Write-Host "  Open source | Every tweak can be undone" -ForegroundColor DarkGray
     Write-Host ""
 
     if (-not (Test-IsAdmin)) {

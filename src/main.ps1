@@ -1,7 +1,7 @@
 # ==============================================================================
 # PC Cleanup v2 -- main.ps1
 # Entry point: parameter parsing, module loading, UI launch.
-# Built with Claude Code (Anthropic). Open source and fully auditable.
+# Built with Claude Code (Anthropic). Open source.
 # ==============================================================================
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Params consumed in CLI dispatch logic below')]

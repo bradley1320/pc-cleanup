@@ -2,7 +2,7 @@
 
 > A Windows optimizer that doesn't hide what it's doing.
 
-Most Windows "optimization" tools are black boxes. You run them, stuff happens, and you hope for the best. PC Cleanup is the opposite -- you can read every tweak it makes, undo any of them, and if you're still not sure, paste the whole thing into an AI and ask it what's going on.
+Most Windows "optimization" tools are black boxes. You run them, stuff happens, and you hope for the best. PC Cleanup is the opposite -- it shows you what it's going to change before it changes anything, and it can put back any tweak afterwards, exactly the way you had it.
 
 It cleans junk files, tunes performance settings, reins in Windows telemetry, checks your security posture, and gives you before/after metrics so you can see if it actually did anything.
 
@@ -80,7 +80,7 @@ Every tweak has a risk tier:
 
 ## Safety Design
 
-Before the tool changes anything, it creates a System Restore Point (or skips gracefully if that's disabled on your machine), exports a timestamped `.reg` backup of the registry hives it's about to touch, and saves the actual current value of every setting to an undo log at `%LOCALAPPDATA%\PCCleanup\undo_log.json`. Everything gets a timestamped log entry too. On top of that, the compiled script has SHA-256 hashes of all config files baked in at build time -- if someone tampers with the JSON, you'll get a warning before anything runs.
+Before changing any setting, the tool saves what that setting currently is on your machine to an undo log at `%LOCALAPPDATA%\PCCleanup\undo_log.json`. Everything gets a timestamped log entry too. Full Tune-Up goes further: it creates a System Restore Point first (or skips gracefully if that's disabled on your machine) and exports a timestamped `.reg` backup of `HKLM\SOFTWARE\Policies`. On top of that, the compiled script has SHA-256 hashes of all config files baked in at build time -- if someone tampers with the JSON, you'll get a warning before anything runs.
 
 ### Undo System
 
@@ -88,15 +88,18 @@ When you undo a tweak, it doesn't just slam in some generic default. It saved wh
 
 - Undo one tweak: menu option 10 > pick the tweak, or `.\pccleanup.ps1 -Undo "TweakName"`
 - Undo everything: menu option 10 > Undo All, or `.\pccleanup.ps1 -Undo All`
-- Nuclear option: use System Restore to roll back to the automatic restore point
+- Nuclear option: use System Restore to roll back to the restore point Full Tune-Up created
 
 ## Is This Safe?
 
-Don't trust me -- check it yourself. `pccleanup.ps1` is a single readable PowerShell file, and `config/tweaks.json` lists every registry key, service, and scheduled task the tool touches, with links to Microsoft's docs. Open either one in a text editor and you can see exactly what's going on.
+Don't trust me -- check it yourself. You don't have to read the code to do it:
 
-Or just paste the script (or the JSON) into ChatGPT, Claude, Gemini, whatever, and ask if it does anything sketchy.
+- **Preview first.** Run `.\pccleanup.ps1 -WhatIf` and use it like normal. It tells you each tweak it would apply and everything it would clean, without changing a single setting or deleting anything.
+- **Every tweak is on one short list.** All 29 live in `config/tweaks.json`, each with a plain-English description, the exact registry keys, services, scheduled tasks, or commands it uses, and a link to Microsoft's docs.
+- **Nothing risky by default.** Only safe-tier tweaks run unless you opt in to moderate or advanced ones.
+- **Any tweak can be undone on its own.** Undo puts back what your PC actually had before -- not a generic default.
 
-You can also run `.\pccleanup.ps1 -WhatIf` to preview every change without actually applying anything.
+The code is open source, 500+ automated tests run on every change, and the security reviews are in [docs/audits](docs/audits).
 
 ## What This Tool Does NOT Do
 
@@ -112,7 +115,7 @@ There's a whole category of "optimization" advice floating around that ranges fr
 - **Disabling SysMain/SuperFetch** -- Another persistent myth, especially for SSD users. SysMain pre-loads frequently used DLLs into standby memory with essentially zero I/O cost on an SSD. Disabling it increases page faults.
 - **Removing UWP/Appx packages** -- On Windows 11 24H2, removing certain packages breaks File Explorer (dark mode, tabs, XAML stuff). And once you remove a system package, getting it back is a nightmare. We're not touching this.
 - **App installation** -- Not our lane. [WinUtil](https://github.com/ChrisTitusTech/winutil) does this really well already.
-- **GUI** -- A graphical interface would undermine the whole "paste it into an AI to verify" model. The tool is a script on purpose.
+- **GUI** -- One script with no dependencies is the point. A graphical interface would mean a UI framework and a lot more code to trust. The tool is a script on purpose.
 
 ## Troubleshooting
 
@@ -201,6 +204,14 @@ Invoke-Pester -Configuration $c
 ```
 
 ## Changelog
+
+### v2.0.2 (2026)
+
+A safety fix. If you're on v2.0.1 or earlier, replace it with this release -- your undo history carries over.
+
+- **Preview mode made real changes** -- `-WhatIf` said "no changes will be made", but Privacy Shield, Performance Mode, Startup Manager and `-Undo` ignored it and changed your system anyway. They now only show what they would do. Quick Clean, Network Reset, Full Tune-Up and the profiles already previewed correctly.
+- **Honest wording** -- the menu banner said every change is reversible, but cleaned files and network resets can't be undone; it now says every tweak can be undone. The README no longer claims a restore point is made before every change -- only Full Tune-Up makes one.
+- **542 unit tests**, including one for each place preview mode used to leak.
 
 ### v2.0.1 (2026)
 
