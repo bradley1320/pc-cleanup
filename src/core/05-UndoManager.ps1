@@ -376,7 +376,7 @@ function Invoke-UndoAll {
     [CmdletBinding()]
     param()
 
-    $log = Get-AppliedTweaks
+    $log = @(Get-AppliedTweaks)
     if ($log.Count -eq 0) {
         Write-Info 'No applied tweaks to undo.'
         return

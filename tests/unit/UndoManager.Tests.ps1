@@ -519,6 +519,15 @@ Describe 'Invoke-UndoAll' {
         @($remaining).Count | Should -Be 0
     }
 
+    It 'should count a single applied tweak in its message' {
+        # Windows PowerShell 5.1 unrolls a one-item return to a scalar with no
+        # .Count, which printed "Undoing  applied tweak(s)" with the number missing.
+        $changes = @([PSCustomObject]@{ Type = 'Registry'; Path = 'HKLM:\Test'; Name = 'Val'; OriginalValue = 1; OriginalType = 'DWord'; KeyExistedBefore = $true })
+        Register-AppliedTweak -Name 'Only' -Changes $changes -Category 'Privacy'
+        Invoke-UndoAll
+        Should -Invoke Write-Host -ParameterFilter { $Object -like '*Undoing 1 applied tweak(s)*' }
+    }
+
     It 'should undo nothing and not claim success in WhatIf mode' {
         $changes = @([PSCustomObject]@{ Type = 'Registry'; Path = 'HKLM:\Test'; Name = 'Val'; OriginalValue = 1; OriginalType = 'DWord'; KeyExistedBefore = $true })
         Register-AppliedTweak -Name 'First' -Changes $changes -Timestamp ([datetime]'2025-01-01T10:00:00') -Category 'Privacy'

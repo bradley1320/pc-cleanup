@@ -211,7 +211,7 @@ A safety fix. If you're on v2.0.1 or earlier, replace it with this release -- yo
 
 - **Preview mode made real changes** -- `-WhatIf` said "no changes will be made", but Privacy Shield, Performance Mode, Startup Manager and `-Undo` ignored it and changed your system anyway. They now only show what they would do. Quick Clean, Network Reset, Full Tune-Up and the profiles already previewed correctly.
 - **Honest wording** -- the menu banner said every change is reversible, but cleaned files and network resets can't be undone; it now says every tweak can be undone. The README no longer claims a restore point is made before every change -- only Full Tune-Up makes one.
-- **542 unit tests**, including one for each place preview mode used to leak.
+- **543 unit tests**, including one for each place preview mode used to leak.
 
 ### v2.0.1 (2026)
 
