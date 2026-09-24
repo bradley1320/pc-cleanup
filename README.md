@@ -193,13 +193,24 @@ $c = New-PesterConfiguration
 $c.Run.Path = "./tests/unit/"
 Invoke-Pester -Configuration $c
 
-# Build distribution
+# Build distribution (output goes to dist/)
 .\build\Build.ps1
 
-# Output goes to dist/
+# Release build: stamps the version and also writes dist/pc-cleanup-v2.zip
+.\build\Build.ps1 -Version 2.0.1 -Package
 ```
 
 ## Changelog
+
+### v2.0.1 (2026)
+
+Bug fixes. If you're on v2.0.0, replace it with this release -- your undo history carries over, since the undo system and every config file are unchanged.
+
+- **Quick Clean ignored a single target** -- picking exactly one cleanup target in the menu said "No targets selected." and cleaned nothing. `-Profile` and `-Module QuickClean` had the same bug whenever the scan found only one target.
+- **Read-only files were never deleted** -- Git marks every object it stores as read-only, so abandoned repos in Temp were skipped wholesale. One real run left 188,000 files behind while reporting zero errors. They are now deleted, after the same allowlist and junction checks as everything else.
+- **Stray output** -- a raw summary table no longer prints after a cleanup.
+- **Launcher** -- `Run.bat` no longer loads your PowerShell profile, passes command-line arguments through, and tells you what to do if antivirus has quarantined the script. The source-code download's `Run.bat` now builds the script instead of failing.
+- **529 unit tests**, now run under Windows PowerShell 5.1 -- the version `Run.bat` actually uses -- as well as PowerShell 7.
 
 ### v2.0 (2026)
 
