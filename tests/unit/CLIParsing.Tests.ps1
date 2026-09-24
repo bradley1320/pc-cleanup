@@ -112,6 +112,10 @@ Describe 'main.ps1 config integrity' {
         $mainScript | Should -BeLike '*Test-ConfigIntegrity*CLI Dispatch*'
     }
 
+    It 'should put the whole session in preview mode for -WhatIf before CLI dispatch' {
+        $mainScript | Should -BeLike '*$script:WhatIfMode = $WhatIf.IsPresent*CLI Dispatch*'
+    }
+
     It 'should check SHA256 hashes of config files' {
         $mainScript | Should -BeLike '*Get-FileHash*SHA256*'
     }

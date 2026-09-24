@@ -320,6 +320,22 @@ Describe 'Invoke-UndoTweak' {
         Should -Invoke Set-PCCleanupRegistry -Times 1 -ParameterFilter { $Value -eq 1 -and $Type -eq 'DWord' }
     }
 
+    It 'should restore nothing and keep the undo record in WhatIf mode' {
+        Mock -CommandName Set-PCCleanupRegistry -MockWith {}
+        $changes = @([PSCustomObject]@{ Type = 'Registry'; Path = 'HKLM:\Test'; Name = 'Val'; OriginalValue = 1; OriginalType = 'DWord'; KeyExistedBefore = $true })
+        Register-AppliedTweak -Name 'PreviewTweak' -Changes $changes -Category 'Privacy'
+        $script:WhatIfMode = $true
+        try {
+            Invoke-UndoTweak -Name 'PreviewTweak'
+        }
+        finally {
+            $script:WhatIfMode = $false
+        }
+        Should -Invoke Set-PCCleanupRegistry -Times 0 -Exactly
+        @(Get-AppliedTweaks | Where-Object { $_.TweakName -eq 'PreviewTweak' }).Count | Should -Be 1
+        Should -Invoke Write-Host -ParameterFilter { $Object -like "*WhatIf: Would undo 'PreviewTweak'*" }
+    }
+
     It 'should remove registry entry when it did not exist before' {
         Mock -CommandName Set-PCCleanupRegistry -MockWith {}
         $changes = @([PSCustomObject]@{ Type = 'Registry'; Path = 'HKLM:\Test'; Name = 'NewVal'; OriginalValue = $null; OriginalType = $null; KeyExistedBefore = $false })
@@ -501,5 +517,21 @@ Describe 'Invoke-UndoAll' {
         Invoke-UndoAll
         $remaining = Get-AppliedTweaks
         @($remaining).Count | Should -Be 0
+    }
+
+    It 'should undo nothing and not claim success in WhatIf mode' {
+        $changes = @([PSCustomObject]@{ Type = 'Registry'; Path = 'HKLM:\Test'; Name = 'Val'; OriginalValue = 1; OriginalType = 'DWord'; KeyExistedBefore = $true })
+        Register-AppliedTweak -Name 'First' -Changes $changes -Timestamp ([datetime]'2025-01-01T10:00:00') -Category 'Privacy'
+        Register-AppliedTweak -Name 'Second' -Changes $changes -Timestamp ([datetime]'2025-01-02T10:00:00') -Category 'Privacy'
+        $script:WhatIfMode = $true
+        try {
+            Invoke-UndoAll
+        }
+        finally {
+            $script:WhatIfMode = $false
+        }
+        Should -Invoke Set-PCCleanupRegistry -Times 0 -Exactly
+        @(Get-AppliedTweaks).Count | Should -Be 2
+        Should -Invoke Write-Host -Times 0 -Exactly -ParameterFilter { $Object -like '*have been undone*' }
     }
 }

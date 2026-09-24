@@ -212,6 +212,10 @@ function Invoke-ExplorerRefresh {
     [CmdletBinding()]
     param()
 
+    # A preview changed nothing, so there is nothing to refresh -- and the
+    # fallback below would restart Explorer.
+    if ($script:WhatIfMode) { return }
+
     Write-Info 'Refreshing Windows shell to apply visual changes...'
 
     # Try P/Invoke WM_SETTINGCHANGE broadcast

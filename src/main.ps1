@@ -140,6 +140,9 @@ function Test-ConfigIntegrity {
 
 if (-not (Test-ConfigIntegrity)) { return }
 
+# Session-wide preview mode -- see $script:WhatIfMode in 01-Utility.ps1.
+$script:WhatIfMode = $WhatIf.IsPresent
+
 # --- CLI Dispatch ---
 
 # Undo mode: -Undo All or -Undo "TweakName"

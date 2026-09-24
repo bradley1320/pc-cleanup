@@ -4,6 +4,14 @@
 # Loaded first -- no dependencies on other project files
 # ==============================================================================
 
+# Preview mode for the whole session, set by main.ps1 from -WhatIf. The functions
+# that apply, undo or disable things (Invoke-Tweak, the undo and startup
+# functions, Invoke-ExplorerRefresh) check it directly, because the Privacy,
+# Performance and Startup menus and -Undo were never handed -WhatIf and made real
+# changes in preview mode. Cleanup, network reset and Full Tune-Up take -WhatIf
+# as a parameter from every caller instead.
+$script:WhatIfMode = $false
+
 function Test-IsAdmin {
     <#
     .SYNOPSIS

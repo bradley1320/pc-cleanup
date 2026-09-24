@@ -218,6 +218,11 @@ function Invoke-UndoTweak {
         Write-Warn "This tweak was applied on build $($entry.AppliedOnBuild). Current build is $currentBuild. Undo values may not match current OS defaults."
     }
 
+    if ($script:WhatIfMode) {
+        Write-Info "WhatIf: Would undo '$Name' ($(@($entry.Changes).Count) change(s))"
+        return
+    }
+
     Write-Info "Undoing '$Name'..."
 
     # SECURITY (F24): Cross-reference undo log paths against tweak definitions
@@ -377,7 +382,12 @@ function Invoke-UndoAll {
         return
     }
 
-    Write-Info "Undoing $($log.Count) applied tweak(s) in reverse order..."
+    if ($script:WhatIfMode) {
+        Write-Info "WhatIf: Would undo $($log.Count) applied tweak(s), most recent first:"
+    }
+    else {
+        Write-Info "Undoing $($log.Count) applied tweak(s) in reverse order..."
+    }
 
     # Sort by AppliedAt descending (most recent first)
     $sorted = $log | Sort-Object -Property AppliedAt -Descending
@@ -386,5 +396,7 @@ function Invoke-UndoAll {
         Invoke-UndoTweak -Name $entry.TweakName
     }
 
-    Write-Success 'All applied tweaks have been undone.'
+    if (-not $script:WhatIfMode) {
+        Write-Success 'All applied tweaks have been undone.'
+    }
 }

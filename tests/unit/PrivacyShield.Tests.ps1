@@ -146,6 +146,22 @@ Describe 'Show-PrivacyMenu' {
         Should -Invoke Set-PCCleanupRegistry -Times 2
     }
 
+    It 'should change nothing on A command in WhatIf mode' {
+        # The interactive menu announced "no changes will be made" under
+        # -WhatIf, yet Apply all went straight through to the registry.
+        Mock -CommandName Read-Host -MockWith { 'A' }
+        $script:WhatIfMode = $true
+        try {
+            Show-PrivacyMenu -RiskLevel 'safe'
+        }
+        finally {
+            $script:WhatIfMode = $false
+        }
+        Should -Invoke Set-PCCleanupRegistry -Times 0 -Exactly
+        @(Get-AppliedTweaks).Count | Should -Be 0
+        Should -Invoke Write-Host -Times 2 -Exactly -ParameterFilter { $Object -like '*WhatIf: Would apply*' }
+    }
+
     It 'should undo all applied tweaks on U command' {
         Mock -CommandName Read-Host -MockWith { 'U' }
         # Apply tweaks first

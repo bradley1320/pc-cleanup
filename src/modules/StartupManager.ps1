@@ -146,6 +146,11 @@ function Disable-StartupProgram {
         return
     }
 
+    if ($script:WhatIfMode) {
+        Write-Info "WhatIf: Would disable startup program '$Name'"
+        return
+    }
+
     # Warn for critical programs
     if ($program.Risk -eq 'critical') {
         Write-Warn "WARNING: '$Name' is flagged as critical -- $($program.RiskReason)"
@@ -223,6 +228,11 @@ function Enable-StartupProgram {
 
     if ($null -eq $entry) {
         Write-Warn "No undo data found for startup program '$Name'."
+        return
+    }
+
+    if ($script:WhatIfMode) {
+        Write-Info "WhatIf: Would re-enable startup program '$Name'"
         return
     }
 

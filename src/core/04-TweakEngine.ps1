@@ -238,6 +238,12 @@ function Invoke-Tweak {
         return
     }
 
+    # Stop before capturing state: a preview must not write an undo record either.
+    if ($script:WhatIfMode) {
+        Write-Info "WhatIf: Would apply '$($tweak.name)'"
+        return
+    }
+
     Write-Info "Applying: $($tweak.name)..."
     $allChanges = @()
 

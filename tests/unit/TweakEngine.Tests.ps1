@@ -391,6 +391,24 @@ Describe 'Invoke-Tweak' {
         Should -Invoke Get-PCCleanupRegistryValue -Times 1
     }
 
+    It 'should change nothing and record nothing in WhatIf mode' {
+        $script:WhatIfMode = $true
+        try {
+            foreach ($id in 'TestRegTweak', 'TestSvcTweak', 'TestTaskTweak', 'TestScriptTweak') {
+                Invoke-Tweak -Name $id
+            }
+        }
+        finally {
+            $script:WhatIfMode = $false
+        }
+        Should -Invoke Set-PCCleanupRegistry -Times 0 -Exactly
+        Should -Invoke Set-PCCleanupService -Times 0 -Exactly
+        Should -Invoke Set-PCCleanupScheduledTask -Times 0 -Exactly
+        Should -Invoke Invoke-PCCleanupScript -Times 0 -Exactly
+        @(Get-AppliedTweaks).Count | Should -Be 0
+        Should -Invoke Write-Host -ParameterFilter { $Object -like "*WhatIf: Would apply 'Test Registry Tweak'*" }
+    }
+
     It 'should call Invoke-UndoTweak when Undo switch is set' {
         Mock -CommandName Invoke-UndoTweak -MockWith {}
         Invoke-Tweak -Name 'TestRegTweak' -Undo

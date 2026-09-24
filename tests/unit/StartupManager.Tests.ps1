@@ -210,6 +210,35 @@ Describe 'Disable-StartupProgram' {
         Should -Invoke Write-Host -ParameterFilter { $Object -like '*not found*' }
     }
 
+    It 'should leave the startup entry alone in WhatIf mode' {
+        Mock -CommandName Get-StartupPrograms -MockWith {
+            @([PSCustomObject]@{
+                Name        = 'PreviewApp'
+                Command     = 'C:\preview.exe'
+                ExePath     = 'C:\preview.exe'
+                Publisher   = 'Test'
+                Description = 'Test app'
+                Source      = 'Registry (User)'
+                SourcePath  = 'HKCU:\SOFTWARE\PCCleanupTest_WhatIf'
+                SourceType  = 'Registry'
+                Risk        = 'normal'
+                RiskReason  = ''
+                IsOrphaned  = $false
+            })
+        }
+        Mock -CommandName Remove-ItemProperty -MockWith {}
+        $script:WhatIfMode = $true
+        try {
+            Disable-StartupProgram -Name 'PreviewApp'
+        }
+        finally {
+            $script:WhatIfMode = $false
+        }
+        Should -Invoke Remove-ItemProperty -Times 0 -Exactly
+        @(Get-AppliedTweaks).Count | Should -Be 0
+        Should -Invoke Write-Host -ParameterFilter { $Object -like "*WhatIf: Would disable startup program 'PreviewApp'*" }
+    }
+
     It 'should register undo data when disabling a registry startup' {
         # Create a test registry entry
         $testRegPath = "HKCU:\SOFTWARE\PCCleanupTest_$(Get-Random)"
@@ -259,6 +288,26 @@ Describe 'Enable-StartupProgram' {
 
         Enable-StartupProgram -Name 'NonExistentProgram'
         Should -Invoke Write-Host -ParameterFilter { $Object -like '*No undo data*' }
+    }
+
+    It 'should restore nothing and keep the undo record in WhatIf mode' {
+        Mock -CommandName Set-ItemProperty -MockWith {}
+        $changes = @([PSCustomObject]@{
+            Type    = 'StartupRegistry'
+            Path    = 'HKCU:\SOFTWARE\PCCleanupTest_WhatIf'
+            Name    = 'PreviewApp'
+            Command = 'C:\preview.exe'
+        })
+        Register-AppliedTweak -Name 'Startup_PreviewApp' -Changes $changes -Category 'Startup'
+        $script:WhatIfMode = $true
+        try {
+            Enable-StartupProgram -Name 'PreviewApp'
+        }
+        finally {
+            $script:WhatIfMode = $false
+        }
+        Should -Invoke Set-ItemProperty -Times 0 -Exactly
+        @(Get-AppliedTweaks | Where-Object { $_.TweakName -eq 'Startup_PreviewApp' }).Count | Should -Be 1
     }
 
     It 'should restore registry entry from undo data' {

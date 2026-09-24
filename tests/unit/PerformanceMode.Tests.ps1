@@ -244,6 +244,22 @@ Describe 'Invoke-ExplorerRefresh' {
         Should -Invoke Stop-Process -Times 1
         Should -Invoke Start-Process -Times 1
     }
+
+    It 'should neither refresh nor restart Explorer in WhatIf mode' {
+        Mock -CommandName Send-SettingChange -MockWith { $false }
+        Mock -CommandName Get-UserConfirmation -MockWith { $true }
+        Mock -CommandName Stop-Process -MockWith {}
+        Mock -CommandName Start-Process -MockWith {}
+        $script:WhatIfMode = $true
+        try {
+            Invoke-ExplorerRefresh
+        }
+        finally {
+            $script:WhatIfMode = $false
+        }
+        Should -Invoke Send-SettingChange -Times 0 -Exactly
+        Should -Invoke Stop-Process -Times 0 -Exactly
+    }
 }
 
 Describe 'Send-SettingChange' {
